@@ -1,0 +1,82 @@
+Screen 0: minimum 8 x 8, current 1920 x 1080, maximum 32767 x 32767
+DP-0 disconnected (normal left inverted right x axis y axis)
+	Identifier: 0x18b
+	Timestamp:  14530226
+	Subpixel:   unknown
+	Clones:    
+	CRTCs:      0 1
+	Transform:  1.000000 0.000000 0.000000
+	            0.000000 1.000000 0.000000
+	            0.000000 0.000000 1.000000
+	           filter: 
+	CTM: 0 1 0 0 0 0 0 0 0 1 0 0 0 0 0 0 
+		0 1 
+	CscMatrix: 65536 0 0 0 0 65536 0 0 0 0 65536 0 
+	BorderDimensions: 4 
+		supported: 4
+	Border: 0 0 0 0 
+		range: (0, 65535)
+	SignalFormat: DisplayPort 
+		supported: DisplayPort
+	ConnectorType: DisplayPort 
+	ConnectorNumber: 0 
+	_ConnectorLocation: 0 
+	non-desktop: 0 
+		supported: 0, 1
+DP-1 connected primary 1920x1080+0+0 (0x18d) normal (normal left inverted right x axis y axis) 344mm x 215mm
+	Identifier: 0x18c
+	Timestamp:  14530226
+	Subpixel:   unknown
+	Gamma:      1.0:1.0:1.0
+	Brightness: 1.0
+	Clones:    
+	CRTC:       0
+	CRTCs:      0 1
+	Transform:  1.000000 0.000000 0.000000
+	            0.000000 1.000000 0.000000
+	            0.000000 0.000000 1.000000
+	           filter: 
+	EDID: 
+		00ffffffffffff002136600160010000
+		01240103802216782a0f95ae5243b026
+		0f505421080001010101010101010101
+		010101010101ef6800a0a0402e603020
+		360058d71000001e000000ff00313233
+		34353637383930313233000000fd0030
+		3c303c1e000a202020202020000000fc
+		005148440a2020202020202020200116
+		020329f1410023090707830100006703
+		0c0010007844e200cae6060701626200
+		e30f0018e305e00000023a801871382d
+		40582c450058d71000001e6a5e00a0a0
+		a029503020350058d71000001e000000
+		00000000000000000000000000000000
+		00000000000000000000000000000000
+		00000000000000000000000000000057
+	_MUTTER_PRESENTATION_OUTPUT: 0 
+	CTM: 0 1 0 0 0 0 0 0 0 1 0 0 0 0 0 0 
+		0 1 
+	CscMatrix: 65536 0 0 0 0 65536 0 0 0 0 65536 0 
+	BorderDimensions: 4 
+		supported: 4
+	Border: 0 0 0 0 
+		range: (0, 65535)
+	SignalFormat: TMDS 
+		supported: TMDS
+	ConnectorType: DisplayPort 
+	ConnectorNumber: 0 
+	_ConnectorLocation: 0 
+	non-desktop: 0 
+		supported: 0, 1
+  1920x1080 (0x18d) 148.500MHz +HSync +VSync *current +preferred
+        h: width  1920 start 2008 end 2052 total 2200 skew    0 clock  67.50KHz
+        v: height 1080 start 1084 end 1089 total 1125           clock  60.00Hz
+  1024x768 (0x18e) 65.000MHz -HSync -VSync
+        h: width  1024 start 1048 end 1184 total 1344 skew    0 clock  48.36KHz
+        v: height  768 start  771 end  777 total  806           clock  60.00Hz
+  800x600 (0x18f) 40.000MHz +HSync +VSync
+        h: width   800 start  840 end  968 total 1056 skew    0 clock  37.88KHz
+        v: height  600 start  601 end  605 total  628           clock  60.32Hz
+  640x480 (0x190) 25.175MHz -HSync -VSync
+        h: width   640 start  656 end  752 total  800 skew    0 clock  31.47KHz
+        v: height  480 start  490 end  492 total  525           clock  59.94Hz
