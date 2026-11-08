@@ -846,22 +846,29 @@ class App(tk.Tk):
             w = vals.get(r["label"])
             if not w:
                 continue
-            if "power_mW" in r and r.get("power_mW") is not None:
-                a = r["power_mW"] / 1000.0
-                # 5V 系统下功率折算电流,供直观感受
-                txt = "%.2f W   (~%.2f A @5V)" % (a, a / 5.0)
+            v, a, pw = r.get("v"), r.get("a"), r.get("power_mW")
+            if v is not None or a is not None:
+                txt = "%s V  %s A  %s W" % (
+                    ("%.2f" % v) if v is not None else "—",
+                    ("%.3f" % a) if a is not None else "—",
+                    ("%.2f" % (pw / 1000.0)) if pw is not None else "—")
+                col = C_FG
+                if a is not None and r.get("crit") and a * 1000 >= r["crit"]:
+                    col = C_BAD
+                elif a is not None and r.get("warn") and a * 1000 >= r["warn"]:
+                    col = C_WARN
+                elif (v is not None and re.search(r"5V|VIN", r["label"], re.I)
+                        and v < VBUS_LOW_WARN):
+                    col = C_BAD if v < VBUS_LOW_BAD else C_WARN
+                elif v is not None and "总输入" in r["label"] and v < 9.0:
+                    col = C_BAD
+            elif pw is not None:
+                watt = pw / 1000.0
+                # 拿不到电压/电流时按 5V 粗略折算电流,供直观感受
+                txt = "%.2f W   (~%.2f A @5V)" % (watt, watt / 5.0)
                 col = C_FG
             else:
-                v, a = r.get("v"), r.get("a")
-                txt = "%s V   %s A" % (
-                    ("%.2f" % v) if v is not None else "—",
-                    ("%.3f" % a) if a is not None else "—")
-                col = C_FG
-                if v is not None and re.search(r"5V|VIN|VDD.*IN", r["label"], re.I):
-                    if v < VBUS_LOW_BAD:
-                        col = C_BAD
-                    elif v < VBUS_LOW_WARN:
-                        col = C_WARN
+                txt, col = "—", C_SUB
             w.configure(text=txt, fg=col)
 
         bus_sum, bus_ports = {}, {}
