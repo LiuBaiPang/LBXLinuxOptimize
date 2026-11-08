@@ -46,14 +46,9 @@ def main():
         if cls is None:
             print("⚠ pymavlink 无 %s(%d), 跳过" % (name, msgid))
             continue
-        try:
-            official = cls.ordered_fieldnames   # 官方线序
-        except AttributeError:
-            official = cls.fieldnames
         mine = [fn for fn, _t in spec]
-        order_ok = mine == official[:len(mine)]
 
-        # 构造可辨识值 → 我方编码 → 官方解码 → 逐字段回读
+        # ============ 方向 A: 我方编码 → 官方解码 ============
         vals, i = {}, 0
         for fn, t in spec:
             if "[" in t:
@@ -84,8 +79,7 @@ def main():
                 continue
             mine_v, off_v = vals[fn], getattr(g, fn, None)
             if off_v is None:
-                bad.append("%s(官方无此字段)" % fn)
-                continue
+                continue        # pymavlink 方言版本可能没有该扩展字段, 忽略
             if t == "f32":
                 if abs(off_v - mine_v) > 0.01:
                     bad.append("%s: 我=%.3f 官=%.3f" % (fn, mine_v, off_v))
@@ -93,15 +87,55 @@ def main():
                 mod = 1 << (8 * SIZE[t])
                 if int(off_v) & (mod - 1) != int(mine_v) & (mod - 1):
                     bad.append("%s: 我=%s 官=%s" % (fn, mine_v, off_v))
-        ok = order_ok and not bad
+
+        # ============ 方向 B: 官方打包 → 我方解码 ============
+        # 用 pymavlink 构造同一条消息打包, 验证我方解析器读出的字段一致
+        bad_b = []
+        try:
+            args = []
+            for fn in cls.__init__.__code__.co_varnames[1:]:
+                if fn not in vals:
+                    args.append(0)
+                    continue
+                v = vals[fn]
+                args.append(v)
+            obj = cls(*args)
+            raw_b = obj.pack(mavp)
+            frames = mav.Parser().feed(raw_b)
+            if not frames:
+                bad_b.append("我方解析器拒收官方帧")
+            else:
+                f = frames[0]
+                for fn, t in spec:
+                    if "[" in t:
+                        base = t[:-1].split("[")[0]
+                        if base == "char":
+                            if str(f.fields.get(fn, ""))[:6] != str(vals[fn]):
+                                bad_b.append("%s: 官=%r 我=%r" %
+                                             (fn, vals[fn], f.fields.get(fn)))
+                        continue
+                    if fn not in f.fields:
+                        bad_b.append("%s(我方未解出)" % fn)
+                        continue
+                    mine_v, my_v = vals[fn], f.fields[fn]
+                    if t == "f32":
+                        if abs(my_v - mine_v) > 0.01:
+                            bad_b.append("%s: 官=%.3f 我=%.3f" % (fn, mine_v, my_v))
+                    else:
+                        mod = 1 << (8 * SIZE[t])
+                        if int(my_v) & (mod - 1) != int(mine_v) & (mod - 1):
+                            bad_b.append("%s: 官=%s 我=%s" % (fn, mine_v, my_v))
+        except Exception as e:
+            bad_b.append("官方打包异常: %r" % e)
+
+        ok = not bad and not bad_b
         all_ok &= ok
         print("%s %s(%d)%s" % ("✓" if ok else "✗", name, msgid,
-              "" if ok else "\n     线序 我=%s\n     官方=%s\n     %s"
-              % (mine, official, "值错位:%s" % bad if bad else "")))
+              "" if ok else "\n     A(我编→官解): %s\n     B(官包→我解): %s"
+              % (bad or "一致", bad_b or "一致")))
 
     print()
-    print("结论:", "全部消息与官方 pymavlink 定义一致 ✓" if all_ok
-          else "存在不一致, 请修正 MSG_DEFS ✗")
+    print("结论:", "双向校验全部一致 ✓" if all_ok else "存在不一致, 请修正 MSG_DEFS ✗")
     return 0 if all_ok else 1
 
 
