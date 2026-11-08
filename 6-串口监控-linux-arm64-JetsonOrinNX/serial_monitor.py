@@ -650,8 +650,9 @@ class App(tk.Tk):
                       "✓ ttyAMA0(40-pin 8/10 脚)未被系统占用, 可直接用于飞控"),
                 fg=C_WARN if occupied else C_OK)
 
-    def _update_port_combos(self, devs):
+    def _update_port_combos(self, ports):
         """用最新端口列表刷新终端页/MAVLink页下拉(保留已有选择)。"""
+        devs = [p["dev"] for p in ports]
         for cmb in (self.cmb_tport, self.cmb_mport):
             old = cmb.get()
             cmb["values"] = devs
@@ -659,9 +660,12 @@ class App(tk.Tk):
                 cmb.set(old)
             elif devs:
                 cmb.set(devs[0])
-        # 飞控口智能默认: 有 ttyACM* 优先(USB 飞控), 其次 ttyTHS*
-        preferred = [d for d in devs if d.startswith("/dev/ttyACM")] or \
-                    [d for d in devs if d.startswith("/dev/ttyTHS")] or devs
+        # 飞控口智能默认: 识别出的飞控 > /dev/px4fc 别名 > ttyACM* > ttyTHS*
+        fc = [p["dev"] for p in ports if p.get("fc")]
+        preferred = fc + \
+            [d for d in devs if d == "/dev/px4fc"] + \
+            [d for d in devs if d.startswith("/dev/ttyACM")] + \
+            [d for d in devs if d.startswith("/dev/ttyTHS")] or devs
         if self.cmb_mport.get() not in preferred and preferred:
             self.cmb_mport.set(preferred[0])
 
