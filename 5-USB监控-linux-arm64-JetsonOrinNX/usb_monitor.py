@@ -653,9 +653,13 @@ class App(tk.Tk):
             self.lb_psrc.configure(text="INA3221: hwmon 直读 ✓ (V/A/W 全量)",
                                    fg=C_OK)
             self.btn_fix.pack_forget()
+        elif src == "jtop" and rails and rails[0].get("a") is not None:
+            self.lb_psrc.configure(text="INA3221: 经 jtop 服务读取 ✓ (V/A/W 全量)",
+                                   fg=C_OK)
+            self.btn_fix.pack_forget()
         elif src == "jtop":
             self.lb_psrc.configure(
-                text="INA3221: 经 jtop 服务 (仅功率W) — 想看电压/电流点下方\"INA3221读取修复\"",
+                text="INA3221: 经 jtop 服务(仅功率W) — 想看电压/电流请点\"INA3221读取修复\"",
                 fg=C_WARN)
             self.btn_fix.pack(anchor="w", pady=(2, 0))
         else:
