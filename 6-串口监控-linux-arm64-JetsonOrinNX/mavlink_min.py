@@ -115,7 +115,8 @@ def type_size(t):
     """单字段在报文里的字节数。"""
     if "[" in t:                      # char[50] / u16[10] / u8[8]
         base, n = t[:-1].split("[")
-        return int(n) * struct.calcsize("<" + _SCALAR[base])
+        sz = struct.calcsize("<" + _SCALAR[base]) if base in _SCALAR else 1
+        return int(n) * sz
     return struct.calcsize("<" + _SCALAR[t])
 
 
@@ -194,6 +195,7 @@ class Parser(object):
                 if not self.buf:
                     return out
                 self._is_v2 = (self.buf[0] == MAVLINK_V2_STX)
+                del self.buf[0]          # 帧头本身已消费, 后面收的是真正头字段
                 # v1 头: len seq sysid compid msgid          = 5 字节
                 # v2 头: len iflag cflag seq sysid compid msgid[3] = 9 字节
                 self._need = 9 if self._is_v2 else 5
