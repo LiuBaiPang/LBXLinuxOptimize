@@ -81,8 +81,10 @@ MSG_DEFS = {
             ("target_system", "u8"), ("target_component", "u8"),
             ("req_stream_id", "u8"), ("req_message_rate", "u16"), ("start_stop", "u8")]),
     74:  ("VFR_HUD", 20, [
-            ("airspeed", "f32"), ("groundspeed", "f32"), ("heading", "i16"),
-            ("throttle", "u16"), ("alt", "f32"), ("climb", "f32")]),
+            # 注意线序: alt/climb 在前, heading/throttle 在后(pymavlink 官方定义核对)
+            ("airspeed", "f32"), ("groundspeed", "f32"),
+            ("alt", "f32"), ("climb", "f32"),
+            ("heading", "i16"), ("throttle", "u16")]),
     76:  ("COMMAND_LONG", 152, [
             ("param1", "f32"), ("param2", "f32"), ("param3", "f32"), ("param4", "f32"),
             ("param5", "f32"), ("param6", "f32"), ("param7", "f32"),
