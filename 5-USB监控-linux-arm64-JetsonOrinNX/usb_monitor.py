@@ -933,7 +933,7 @@ class App(tk.Tk):
             text=mt, fg=C_BAD if over_budget(d) else C_FG)
         rt = d["runtime"] or "?"
         self._dv["runtime"].configure(
-            text=rt + ("   Zz已自动挂起" if rt == "suspended" else ""),
+            text=rt + ("   Zz 已自动挂起" if rt == "suspended" else ""),
             fg=C_SUB if rt == "suspended" else C_OK)
         self._dv["control"].configure(
             text="%s (%s)" % (d["control"] or "?",
