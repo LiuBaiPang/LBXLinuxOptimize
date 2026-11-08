@@ -119,8 +119,6 @@ MSG_NAMES = {
     141: "ALTITUDE(高度)",
     230: "ESTIMATOR_STATUS(估计器状态)",
     140: "ESC_TELEMETRY(电调遥测)",
-    241: "WIFI_CONFIG_AP?/未确认",
-    331: "消息331(厂商扩展)",
 }
 
 # 类型 -> struct 格式(标量部分)
@@ -254,10 +252,11 @@ class Parser(object):
 
         name = MSG_DEFS.get(msgid, (None,))[0]
         if name is None:
-            # 未知消息: 没有 CRC_EXTRA, 无法校验 —— 计数并透传 id
+            # 未定义消息: 没有 CRC_EXTRA, 无法校验 —— 计数并透传 id
             self.unknown_frames += 1
+            label = MSG_NAMES.get(msgid, "消息%d" % msgid)
             return Frame(is_v2=self._is_v2, seq=seq, sysid=sysid,
-                         compid=compid, msgid=msgid, name="未知消息%d" % msgid,
+                         compid=compid, msgid=msgid, name=label,
                          fields={}, wire_len=wire_len, ts=time.time(),
                          crc_ok=None)
         calc = frame_crc(header_crc_part, payload, MSG_DEFS[msgid][1])
