@@ -558,9 +558,9 @@ def _selftest():
           and f.fields["satellites_visible"] == 0,
           "v2 截断 payload 解析(扩展字段缺省为 0)")
 
-    # 6. 杂散字节 + 两个连续帧 + PX4 模式
+    # 6. 杂散字节 + 两个连续帧 + PX4 模式(PX4: MANUAL = main_mode 1)
     p = Parser()
-    a = encode(0, dict(custom_mode=0, type=2, autopilot=12, base_mode=29,
+    a = encode(0, dict(custom_mode=1 << 24, type=2, autopilot=12, base_mode=29,
                        system_status=3, mavlink_version=3))
     b = encode(74, dict(airspeed=12.5, groundspeed=13.5, heading=180,
                         throttle=55, alt=100.5, climb=-1.5))
