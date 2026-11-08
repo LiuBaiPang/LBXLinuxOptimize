@@ -1193,6 +1193,20 @@ class App(tk.Tk):
     def _mav_reader(self):
         fd = self.mfd
         while self.mfd == fd and fd is not None and not self._stop:
+            # 地面站心跳: 每秒一发(飞控看到它才会持续发流, 掉发会停更)
+            now = time.time()
+            if now - getattr(self, "_mav_last_gcs_hb", 0) > 1.0:
+                self._mav_last_gcs_hb = now
+                try:
+                    raw = mav.heartbeat(
+                        autopilot=0, mav_type=6, base_mode=0, custom_mode=0,
+                        seq=self._mav_next_seq())
+                    os.write(fd, raw)
+                    self.m_tx += len(raw)
+                    if self._io_stat.get(self.mdev):
+                        self._io_stat[self.mdev]["tx"] += len(raw)
+                except OSError:
+                    break
             try:
                 r, _, _ = select.select([fd], [], [], 0.1)
             except OSError:
