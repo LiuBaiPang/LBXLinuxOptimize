@@ -143,11 +143,12 @@ def crc_x25(data, crc=0xFFFF):
 
 def frame_crc(header_after_stx, payload, crc_extra):
     """按 MAVLink 规则连算 CRC: 头(不含 STX) + 线上 payload + CRC_EXTRA。
-    注意: 链式累加时中间不做 0xFFFF 异或,只在最后做一次(与官方一致)。"""
+    注意: MAVLink 的"X.25"只是初始值 0xFFFF + 反射多项式 0x8408,
+    最终【不做】0xFFFF 异或(与 pymavlink x25crc / 官方 C 实现一致)。"""
     c = _crc16(header_after_stx)
     c = _crc16(payload, c)
     c = _crc16(bytes([crc_extra]), c)
-    return c ^ 0xFFFF
+    return c
 
 
 # ---------------- 帧解析器 ----------------
