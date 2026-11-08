@@ -36,7 +36,9 @@ MSG_DEFS = {
             ("onboard_control_sensors_health", "u16"), ("load", "u16"),
             ("voltage_battery", "u16"), ("current_battery", "i16"),
             ("drop_rate_comm", "u8"), ("errors_comm", "u8"),
-            ("errors_count1", "u8"), ("errors_count2", "u8"), ("battery_remaining", "i8")]),
+            ("errors_count1", "u8"), ("errors_count2", "u8"),
+            ("errors_count3", "u8"), ("errors_count4", "u8"),
+            ("battery_remaining", "i8")]),
     2:   ("SYSTEM_TIME", 137, [("time_unix_usec", "u64"), ("time_boot_ms", "u32")]),
     4:   ("PING", 237, [
             ("time_usec", "u64"), ("seq", "u32"),
