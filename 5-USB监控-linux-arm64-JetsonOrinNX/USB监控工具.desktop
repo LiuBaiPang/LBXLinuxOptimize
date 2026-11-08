@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=USB监控工具
+Comment=实时监控 USB 供电/速率/传输/摄像头画面,定位供电不足与掉线
+Exec=/home/jsz/AAAFIXsystem/5-USB监控-linux-arm64-JetsonOrinNX/启动USB监控.sh
+Icon=media-removable
+Terminal=false
+Categories=System;Settings;
+StartupNotify=false
