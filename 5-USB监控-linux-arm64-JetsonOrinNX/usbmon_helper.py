@@ -71,7 +71,11 @@ def parse_count(line, counters):
             break
     if length is None or length <= 0:
         return
-    key = (bus, dev)
+    # usbmon 文本里是 "002" 这种带前导零的,与 sysfs 的 "2" 对齐
+    try:
+        key = (str(int(bus)), str(int(dev)))
+    except ValueError:
+        return
     c = counters.setdefault(key, [0, 0])
     if dirn == "i":
         c[0] += length
