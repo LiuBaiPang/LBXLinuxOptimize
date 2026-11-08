@@ -347,14 +347,25 @@ def collect_snapshot():
         if d["authorized"] == "0":
             warnings.append("⚠ %s 未被系统授权(authorized=0)" % n)
     for r in rails:
-        v = r.get("v")
-        if v is not None and re.search(r"5V|VIN|VDD.*IN|IN_5", r["label"], re.I):
+        v, a = r.get("v"), r.get("a")
+        # 电流超阈值(jtop/hwmon 都带 mA 级 warn/crit)
+        if a is not None and r.get("crit") and a * 1000 >= r["crit"]:
+            warnings.append("⚡ 供电轨 %s 电流 %.2fA 已达临界值 %.2fA!"
+                            % (r["label"], a, r["crit"] / 1000.0))
+        elif a is not None and r.get("warn") and a * 1000 >= r["warn"]:
+            warnings.append("⚡ 供电轨 %s 电流 %.2fA 超过告警值 %.2fA"
+                            % (r["label"], a, r["warn"] / 1000.0))
+        # 电压过低
+        if v is not None and re.search(r"5V|VIN|IN_5", r["label"], re.I):
             if v < VBUS_LOW_BAD:
                 warnings.append("⚡ 供电轨 %s 电压 %.2fV 严重偏低(<%.2fV),USB 供电不足!"
                                 % (r["label"], v, VBUS_LOW_BAD))
             elif v < VBUS_LOW_WARN:
                 warnings.append("⚡ 供电轨 %s 电压 %.2fV 偏低(<%.2fV)"
                                 % (r["label"], v, VBUS_LOW_WARN))
+        elif v is not None and "总输入" in r["label"] and v < 9.0:
+            warnings.append("⚡ 整板输入电压 %.2fV 过低(<9.0V),超出 Orin NX 供电规格!"
+                            % v)
 
     return {
         "t": time.time(), "devices": devs, "power_src": src,
