@@ -137,6 +137,12 @@ def scan_ports():
         hw = os.path.basename(devlink) if "/devices/" in devlink else ""
         if not hw and name.startswith("ttyS"):
             hw = "(无真实硬件)"
+        driver = ""
+        try:
+            driver = os.path.basename(os.readlink(
+                "/sys/class/tty/%s/device/driver" % name))
+        except OSError:
+            pass
         # 占用检测: 扫 /proc/*/fd (只能看到自己有权限看的进程)
         users = []
         for pid_dir in glob.glob("/proc/[0-9]*"):
