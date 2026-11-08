@@ -61,7 +61,7 @@ MSG_DEFS = {
             ("cog", "u16"), ("fix_type", "u8"), ("satellites_visible", "u8"),
             # --- 以下为 v2 扩展字段(截断 payload 时自动省略) ---
             ("alt_ellipsoid", "i32"), ("h_acc", "u32"), ("v_acc", "u32"),
-            ("vel_acc", "u32"), ("hdg_acc", "u16"), ("yaw", "i16")]),
+            ("vel_acc", "u32"), ("hdg_acc", "u16")]),
     30:  ("ATTITUDE", 39, [
             ("time_boot_ms", "u32"),
             ("roll", "f32"), ("pitch", "f32"), ("yaw", "f32"),
