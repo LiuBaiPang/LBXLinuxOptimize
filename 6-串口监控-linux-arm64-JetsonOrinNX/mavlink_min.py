@@ -467,6 +467,8 @@ def ardupilot_mode(mav_type, custom_mode):
 def px4_mode(custom_mode):
     main = (custom_mode >> 24) & 0xFF
     sub = (custom_mode >> 16) & 0xFF
+    if main == 0:
+        return "未设置(待机)"
     m = PX4_MAIN_MODES.get(main, "主模式%d" % main)
     if main == 4 and sub:
         m += " / " + PX4_AUTO_SUB_MODES.get(sub, "子模式%d" % sub)
