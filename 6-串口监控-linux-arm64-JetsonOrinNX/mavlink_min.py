@@ -44,20 +44,21 @@ MSG_DEFS = {
             ("time_usec", "u64"), ("seq", "u32"),
             ("target_system", "u8"), ("target_component", "u8")]),
     11:  ("SET_MODE", 89, [
-            ("target_system", "u8"), ("base_mode", "u8"), ("custom_mode", "u32")]),
+            ("custom_mode", "u32"), ("target_system", "u8"), ("base_mode", "u8")]),
     20:  ("PARAM_REQUEST_READ", 214, [
+            ("param_index", "i16"),
             ("target_system", "u8"), ("target_component", "u8"),
-            ("param_id", "char[16]"), ("param_index", "i16")]),
+            ("param_id", "char[16]")]),
     22:  ("PARAM_VALUE", 220, [
-            ("param_id", "char[16]"), ("param_value", "f32"), ("param_type", "u8"),
-            ("param_count", "u16"), ("param_index", "u16")]),
+            ("param_value", "f32"), ("param_count", "u16"), ("param_index", "u16"),
+            ("param_id", "char[16]"), ("param_type", "u8")]),
     24:  ("GPS_RAW_INT", 24, [
-            ("time_usec", "u64"), ("fix_type", "u8"), ("lat", "i32"), ("lon", "i32"),
-            ("alt", "i32"), ("eph", "u16"), ("epv", "u16"), ("vel", "u16"), ("cog", "u16"),
-            ("satellites_visible", "u8"),
+            ("time_usec", "u64"), ("lat", "i32"), ("lon", "i32"),
+            ("alt", "i32"), ("eph", "u16"), ("epv", "u16"), ("vel", "u16"),
+            ("cog", "u16"), ("fix_type", "u8"), ("satellites_visible", "u8"),
             # --- 以下为 v2 扩展字段(截断 payload 时自动省略) ---
             ("alt_ellipsoid", "i32"), ("h_acc", "u32"), ("v_acc", "u32"),
-            ("vel_c", "u16"), ("vn", "i16"), ("ve", "i16"), ("vd", "i16")]),
+            ("vel_acc", "u32"), ("hdg_acc", "u16"), ("yaw", "i16")]),
     30:  ("ATTITUDE", 39, [
             ("time_boot_ms", "u32"),
             ("roll", "f32"), ("pitch", "f32"), ("yaw", "f32"),
@@ -71,17 +72,18 @@ MSG_DEFS = {
             ("alt", "i32"), ("relative_alt", "i32"),
             ("vx", "i16"), ("vy", "i16"), ("vz", "i16"), ("hdg", "u16")]),
     65:  ("RC_CHANNELS", 118, [
-            ("time_boot_ms", "u32"), ("chancount", "u8"),
+            ("time_boot_ms", "u32"),
             ("chan1_raw", "u16"), ("chan2_raw", "u16"), ("chan3_raw", "u16"),
             ("chan4_raw", "u16"), ("chan5_raw", "u16"), ("chan6_raw", "u16"),
             ("chan7_raw", "u16"), ("chan8_raw", "u16"), ("chan9_raw", "u16"),
             ("chan10_raw", "u16"), ("chan11_raw", "u16"), ("chan12_raw", "u16"),
             ("chan13_raw", "u16"), ("chan14_raw", "u16"), ("chan15_raw", "u16"),
             ("chan16_raw", "u16"), ("chan17_raw", "u16"), ("chan18_raw", "u16"),
-            ("rssi", "u8")]),
+            ("chancount", "u8"), ("rssi", "u8")]),
     66:  ("REQUEST_DATA_STREAM", 148, [
+            ("req_message_rate", "u16"),
             ("target_system", "u8"), ("target_component", "u8"),
-            ("req_stream_id", "u8"), ("req_message_rate", "u16"), ("start_stop", "u8")]),
+            ("req_stream_id", "u8"), ("start_stop", "u8")]),
     74:  ("VFR_HUD", 20, [
             # 注意线序: alt/climb 在前, heading/throttle 在后(pymavlink 官方定义核对)
             ("airspeed", "f32"), ("groundspeed", "f32"),
