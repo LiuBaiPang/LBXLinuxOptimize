@@ -619,6 +619,9 @@ class App(tk.Tk):
             if p["perms"] in ("只读", "只写", "无权限"):
                 tags.append("perm")
             note = []
+            if p.get("fc"):
+                note.append("【飞控】%s"
+                            % p.get("byid", "").replace("usb-", "").split("_0-")[0])
             if dev in snap["console"].split():
                 note.append("内核控制台(数据被日志污染)")
             if "serial-getty@%s" % p["name"] in snap["getty"]:
@@ -635,7 +638,7 @@ class App(tk.Tk):
             self.tv.selection_set(sel[0])
         self._console_txt = snap["console"]
         self._getty_txt = ",".join(snap["getty"]) or "无"
-        self._update_port_combos([p["dev"] for p in ports])
+        self._update_port_combos(ports)
         # 40-pin(ttyAMA0)占用状态提示(资料页)
         if hasattr(self, "lbl_40stat"):
             occupied = ("ttyAMA0" in snap["console"].split()
