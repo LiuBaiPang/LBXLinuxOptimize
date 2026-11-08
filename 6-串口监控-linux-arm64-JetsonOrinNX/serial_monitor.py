@@ -1210,8 +1210,7 @@ class App(tk.Tk):
         self.m_type = f.get("type")
         base, custom = f.get("base_mode", 0), f.get("custom_mode", 0)
         self.m_mode = mav.mode_name(self.m_autopilot, self.m_type, base, custom)
-        self.m_armed = bool(base & mav._MAV_MODE_FLAG_ARMED) if hasattr(
-            mav, "_MAV_MODE_FLAG_ARMED") else bool(base & 0x80)
+        self.m_armed = bool(base & mav.MAV_MODE_FLAG_SAFETY_ARMED)
         self.m_sysstate = mav.MAV_STATE_NAMES.get(f.get("system_status"), "--")
         now = time.time()
         self.m_hb_ts.append(now)
@@ -1232,13 +1231,7 @@ class App(tk.Tk):
                              self.m_sysid, self.m_compid,
                              seq=self._mav_next_seq()),
                             "SET_MESSAGE_INTERVAL GLOBAL_POSITION_INT 10Hz")
-            self._mav_write(mav.encode(148, {}, self.m_seq if False else self._mav_next_seq(),
-                                       compid=190, sysid=255) if False else
-                            mav.command_long(520, 0, 0, 0, 0, 0, 0, 0,
-                                             self.m_sysid, self.m_compid,
-                                             seq=self._mav_next_seq())
-                            if False else
-                            mav.encode(148, dict(), seq=self._mav_next_seq()),
+            self._mav_write(mav.encode(148, dict(), seq=self._mav_next_seq()),
                             "请求 AUTOPILOT_VERSION")
             self.log("✓ 收到心跳: %s sysid=%d" % (
                 mav.MAV_AUTOPILOT_NAMES.get(self.m_autopilot, "?"), self.m_sysid))
@@ -1256,10 +1249,9 @@ class App(tk.Tk):
     def _mav_handle_frame(self, fr):
         name, flds = fr.name, fr.fields
         now = time.time()
-        lst = self.m_rates.setdefault(name, [time.deque() if hasattr(time, "deque") else None, 0])
-        from collections import deque
-        if lst[0] is None:
-            lst[0] = deque(maxlen=400)
+        lst = self.m_rates.get(name)
+        if lst is None:
+            lst = self.m_rates[name] = [deque(maxlen=600), 0]
         lst[0].append(now)
         lst[1] += 1
         if name == "HEARTBEAT":
@@ -1271,12 +1263,10 @@ class App(tk.Tk):
             rem = flds.get("battery_remaining", -1)
             self.m_batt_r = rem if rem >= 0 else None
         elif name == "ATTITUDE":
-            import math
             self.m_att = (math.degrees(flds.get("roll", 0)),
                           math.degrees(flds.get("pitch", 0)),
                           math.degrees(flds.get("yaw", 0)))
         elif name == "ATTITUDE_QUATERNION":
-            import math
             r, p, y = mav.quat_to_rpy(flds.get("q1", 1), flds.get("q2", 0),
                                       flds.get("q3", 0), flds.get("q4", 0))
             self.m_att = (math.degrees(r), math.degrees(p), math.degrees(y))
