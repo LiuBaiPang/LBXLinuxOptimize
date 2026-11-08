@@ -1625,6 +1625,15 @@ class App(tk.Tk):
         self.btn(acts, "恢复40-pin为系统默认(需密码)", self._act_restore40
                  ).pack(side="left", padx=6)
 
+        acts2 = tk.Frame(f, bg=C_BG)
+        acts2.pack(fill="x", padx=8, pady=(0, 6))
+        self.btn(acts2, "创建飞控固定别名 /dev/px4fc(需密码)", self._act_fc_alias,
+                 bg=C_OK, fg="#000000").pack(side="left")
+        self.btn(acts2, "移除飞控别名(需密码)", self._act_fc_alias_rm
+                 ).pack(side="left", padx=6)
+        tk.Label(acts2, text="别名作用: 飞控换 USB 口后仍叫 /dev/px4fc, 程序不用改",
+                 bg=C_BG, fg=C_SUB, font=FONT_S).pack(side="left", padx=10)
+
         tip = tk.Frame(f, bg=C_CARD)
         tip.pack(fill="both", expand=True, padx=8, pady=(4, 8))
         tk.Label(tip, text="使用要点", bg=C_CARD, fg=C_FG,
