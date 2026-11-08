@@ -1087,8 +1087,8 @@ class App(tk.Tk):
         self.cmb_mmode.set("(连接后按固件加载)")
         self.cmb_mmode.pack(side="left", padx=4)
         self.btn(ctrl, "切换模式", self._mav_setmode).pack(side="left", padx=2)
-        self.btn(ctrl, "✋ 上锁", self._mav_disarm).pack(side="left", padx=(16, 2))
-        self.btn(ctrl, "⚡ 解锁(危险)", self._mav_arm, bg=C_BAD,
+        self.btn(ctrl, "上锁", self._mav_disarm).pack(side="left", padx=(16, 2))
+        self.btn(ctrl, "解锁(危险)", self._mav_arm, bg=C_BAD,
                  fg="#ffffff").pack(side="left", padx=2)
         self.btn(ctrl, "请求数据流", self._mav_reqstream).pack(side="left", padx=(16, 2))
         self.btn(ctrl, "Ping", self._mav_ping).pack(side="left", padx=2)
