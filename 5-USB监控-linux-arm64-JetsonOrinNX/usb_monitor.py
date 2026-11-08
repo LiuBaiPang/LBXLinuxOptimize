@@ -201,14 +201,49 @@ def find_ina3221():
     return ""
 
 
+def _int_or_none(s):
+    try:
+        return int(s)
+    except Exception:
+        return None
+
+
+def _jtop_rails(raw):
+    """jetson-stats 4.x jtop.power 结构:
+      {"rail": {名: {volt(mV), curr(mA), power(mW), warn, crit, avg,...}},
+       "tot":  {同上, name:"VDD_IN"}}
+    返回统一 rails 列表;结构对不上时返回空。"""
+    rails = []
+    if not isinstance(raw, dict):
+        return rails
+    tot = raw.get("tot")
+    if isinstance(tot, dict) and tot.get("power") is not None:
+        rails.append({
+            "label": "%s·总输入" % (tot.get("name") or "VDD_IN"),
+            "v": (tot.get("volt") or 0) / 1000.0,
+            "a": (tot.get("curr") or 0) / 1000.0,
+            "power_mW": tot.get("power"),
+            "warn": tot.get("warn"), "crit": tot.get("crit"),
+        })
+    for name, r in (raw.get("rail") or {}).items():
+        if isinstance(r, dict) and r.get("power") is not None:
+            rails.append({
+                "label": name,
+                "v": (r.get("volt") or 0) / 1000.0,
+                "a": (r.get("curr") or 0) / 1000.0,
+                "power_mW": r.get("power"),
+                "warn": r.get("warn"), "crit": r.get("crit"),
+            })
+    return rails
+
+
 def _flatten_jtop_power(raw):
-    """jetson-stats 版本间 jtop.power 结构有差异,这里宽容地拍平。
-    返回 (rails:[{label,power_mW}], total_mW|None)。"""
+    """兜底: 老版本 jtop.power 结构宽容拍平,只剩功率(mW)。"""
     rails, total = [], None
     if not isinstance(raw, dict):
         return rails, total
     for k, v in raw.items():
-        if k in ("power",):      # 3.x 的外层包裹
+        if k == "power":          # 3.x 的外层包裹
             r2, t2 = _flatten_jtop_power(v)
             rails += r2
             total = t2 if total is None else total
@@ -230,8 +265,8 @@ def _flatten_jtop_power(raw):
 
 def read_power():
     """读取电源轨。返回 (source, rails, need_fix)
-    source: 'hwmon' / 'jtop' / None; rails 元素:
-      hwmon: {label, v, a}   jtop: {label, power_mW}"""
+    source: 'hwmon' / 'jtop' / None; rail 统一为:
+      {label, v:V|None, a:A|None, power_mW|None, warn:mA|None, crit:mA|None}"""
     h = find_ina3221()
     if h:
         rails = []
@@ -246,20 +281,26 @@ def read_power():
                 "label": label,
                 "v": (int(mv) / 1000.0) if mv else None,
                 "a": (int(ma) / 1000.0) if ma else None,
+                "power_mW": None,
+                "warn": _int_or_none(rd(h, "curr%d_max" % ch)),
+                "crit": _int_or_none(rd(h, "curr%d_crit" % ch)),
             })
         if ok:
             return "hwmon", rails, False
 
-    # 兜底: jetson-stats 的 root 守护服务(jsz 在 jtop 组)
+    # 兜底: jetson-stats 的 root 守护服务(jsz 在 jtop 组,免 root 可用)
     try:
         from jtop import jtop  # noqa
         with jtop(no_data_guard=False) as jt:
             raw = jt.power
-        rails, total = _flatten_jtop_power(raw)
-        if rails or total is not None:
+        rails = _jtop_rails(raw)
+        if not rails:
+            fl, total = _flatten_jtop_power(raw)
             if total is not None:
-                rails = [r for r in rails if r["label"] != "total"]
-                rails.insert(0, {"label": "总输入", "power_mW": total})
+                fl = [r for r in fl if r["label"] != "total"]
+                fl.insert(0, {"label": "总输入", "power_mW": total})
+            rails = fl
+        if rails:
             return "jtop", rails, False
     except Exception:
         pass
