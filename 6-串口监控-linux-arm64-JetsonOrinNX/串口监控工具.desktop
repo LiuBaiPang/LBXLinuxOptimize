@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=串口监控工具
+Comment=串口实时监控/串口终端/飞控MAVLink遥测与指令/40针资料手册
+Exec=/home/jsz/AAAFIXsystem/6-串口监控-linux-arm64-JetsonOrinNX/启动串口监控.sh
+Icon=utilities-terminal
+Terminal=false
+Categories=System;Settings;
+StartupNotify=false
