@@ -10,6 +10,7 @@ mavlink_min —— MAVLink v1/v2 最小实现(纯 Python 标准库,零第三方�
   - CRC-16/X.25 + 每消息 CRC_EXTRA 校验(与飞控逐字节一致才收)
   - 常用消息的编解码: 心跳/系统状态/姿态/四元数/位置/GPS/HUD/RC/命令/文本/参数/版本
   - ArduPilot 与 PX4 两套 custom_mode → 飞行模式名 映射(按 autopilot 字段自动选)
+  - 未知消息 ID 无法校验 CRC_EXTRA(表里没有),按"未校验"计数并保留 id 供速率统计
 
 直接运行本文件可自测: python3 mavlink_min.py
 """
@@ -114,7 +115,7 @@ def type_size(t):
     """单字段在报文里的字节数。"""
     if "[" in t:                      # char[50] / u16[10] / u8[8]
         base, n = t[:-1].split("[")
-        return _SCALAR.get(base, 1) and int(n) * struct.calcsize("<" + _SCALAR[base])
+        return int(n) * struct.calcsize("<" + _SCALAR[base])
     return struct.calcsize("<" + _SCALAR[t])
 
 
@@ -123,26 +124,34 @@ def msg_size(msgid):
     return sum(type_size(t) for _, t in MSG_DEFS[msgid][2])
 
 
-def crc_x25(data, crc=0xFFFF):
-    """MAVLink 使用的 CRC-16/X.25(初值与末值异或均为 0xFFFF, 反射多项式 0x8408)。"""
+def _crc16(data, crc=0xFFFF):
+    """CRC-16/X.25 裸循环(初值 0xFFFF, 反射多项式 0x8408, 末尾不再异或)。"""
     for b in data:
         crc ^= b
         for _ in range(8):
             crc = (crc >> 1) ^ 0x8408 if crc & 1 else crc >> 1
-    return crc ^ 0xFFFF
+    return crc
+
+
+def crc_x25(data, crc=0xFFFF):
+    """单段 CRC-16/X.25(最终异或 0xFFFF)。"""
+    return _crc16(data, crc) ^ 0xFFFF
 
 
 def frame_crc(header_after_stx, payload, crc_extra):
-    """按 MAVLink 规则算校验: 头(不含 STX) + 线上 payload(截断态) + CRC_EXTRA。"""
-    c = crc_x25(header_after_stx)
-    return crc_x25(payload, c) ^ 0xFFFF ^ crc_x25(bytes([crc_extra])) ^ 0xFFFF
+    """按 MAVLink 规则连算 CRC: 头(不含 STX) + 线上 payload + CRC_EXTRA。
+    注意: 链式累加时中间不做 0xFFFF 异或,只在最后做一次(与官方一致)。"""
+    c = _crc16(header_after_stx)
+    c = _crc16(payload, c)
+    c = _crc16(bytes([crc_extra]), c)
+    return c ^ 0xFFFF
 
 
 # ---------------- 帧解析器 ----------------
 
 class Frame(object):
     __slots__ = ("is_v2", "seq", "sysid", "compid", "msgid", "name",
-                 "fields", "wire_len", "ts", "bad_crc")
+                 "fields", "wire_len", "ts", "crc_ok")
 
     def __init__(self, **kw):
         for k in self.__slots__:
@@ -154,20 +163,23 @@ class Frame(object):
 
 
 class Parser(object):
-    """流式解析器: feed(字节) 即可, 函数内部攒缓冲, 返回本轮解出的 Frame 列表。
+    """流式解析器: feed(字节) 攒缓冲, 返回本轮解出的 Frame 列表。
 
-    校验失败的帧直接丢弃(与 pymavlink 行为一致), 并计数到 self.bad_frames。
+    三态状态机: 0=找帧头 1=收帧头 2=收 payload+CRC(+签名)。
+    已知消息: CRC_EXTRA 校验, 失败丢弃并计 bad_frames。
+    未知消息: 无法校验(缺 CRC_EXTRA), 计 unknown_frames, 仅保留 id 供速率统计。
     """
 
     def __init__(self):
         self.buf = bytearray()
         self.bad_frames = 0
+        self.unknown_frames = 0
         self.frames_v1 = 0
         self.frames_v2 = 0
-        # 状态: 0=等帧头 1=收完整帧中
         self._st = 0
         self._need = 0
         self._hdr = bytearray()
+        self._is_v2 = False
 
     def feed(self, data):
         out = []
@@ -176,95 +188,69 @@ class Parser(object):
         while True:
             if self._st == 0:
                 # 丢掉帧头前的杂散字节, 认出 v1/v2
-                while self.buf:
-                    b = self.buf[0]
-                    if b == MAVLINK_V2_STX:
-                        self._is_v2 = True
-                        break
-                    if b == MAVLINK_V1_STX:
-                        self._is_v2 = False
-                        break
+                while self.buf and self.buf[0] not in (MAVLINK_V1_STX,
+                                                       MAVLINK_V2_STX):
                     del self.buf[0]
                 if not self.buf:
                     return out
-                self._st = 1
-                self._hdr = bytearray()
-                # v1 头: len seq sysid compid msgid        = 5 字节
+                self._is_v2 = (self.buf[0] == MAVLINK_V2_STX)
+                # v1 头: len seq sysid compid msgid          = 5 字节
                 # v2 头: len iflag cflag seq sysid compid msgid[3] = 9 字节
                 self._need = 9 if self._is_v2 else 5
-            else:
+                self._hdr = bytearray()
+                self._st = 1
+            elif self._st == 1:
                 take = min(self._need - len(self._hdr), len(self.buf))
                 self._hdr += self.buf[:take]
                 del self.buf[:take]
                 if len(self._hdr) < self._need:
                     return out
-                f = self._parse_one()
+                plen = self._hdr[0]
+                extra = 0
+                if self._is_v2 and (self._hdr[1] & MAVLINK_IFLAG_SIGNED):
+                    extra = 13          # 签名尾
+                self._need = plen + 2 + extra
+                self._st = 2
+            else:
+                if len(self.buf) < self._need:
+                    return out
+                body = bytes(self.buf[:self._need])
+                del self.buf[:self._need]
+                self._st = 0
+                f = self._finish(body)
                 if f is not None:
                     out.append(f)
-                self._st = 0
 
-    def _parse_one(self):
+    def _finish(self, body):
         h = self._hdr
         if self._is_v2:
-            plen, iflag = h[0], h[1]
-            seq, sysid, compid = h[3], h[4], h[5]
+            plen, seq, sysid, compid = h[0], h[3], h[4], h[5]
             msgid = h[6] | (h[7] << 8) | (h[8] << 16)
-            header_crc_part = h[0:9]          # len..msgid
-        else:
-            plen = h[0]
-            seq, sysid, compid, msgid = h[1], h[2], h[3], h[4]
-            header_crc_part = h[0:5]
-        # 需要 payload + 2 字节校验
-        total = plen + 2
-        if len(self.buf) < total:
-            # 不够, 把已收的头部缓存回 buf 前端, 状态保持等 payload
-            self.buf[0:0] = h
-            self._st = 0
-            self._hdr = bytearray()
-            # 重新进入等帧头状态会把刚才认掉的 STX 当杂散丢掉 —— 所以改用
-            # 专门的"等 payload"状态: 这里直接回到状态 1 但 need=0 头已齐。
-            # 简化处理: 把头放回 buf 后回到找帧头会死循环, 因此我们改用
-            # 独立状态 2 (头已解好, 只等 payload)。
-            self._st = 2
-            self._ctx = (self._is_v2, plen, seq, sysid, compid, msgid,
-                         bytes(header_crc_part))
-            return None
-        payload = bytes(self.buf[:plen])
-        crc_wire = self.buf[plen] | (self.buf[plen + 1] << 8)
-        del self.buf[:total]
-        # 签名帧: 后面还有 13 字节, 跳过
-        if self._is_v2 and (iflag & MAVLINK_IFLAG_SIGNED):
-            if len(self.buf) < 13:
-                # 签名不完整: 整帧放弃(罕见, 一般只在加了密钥的链路)
-                self.buf.clear()
-                self.bad_frames += 1
-                return None
-            del self.buf[:13]
-        return self._finish(self._is_v2, plen, seq, sysid, compid, msgid,
-                            header_crc_part, payload, crc_wire)
-
-    def _finish(self, is_v2, plen, seq, sysid, compid, msgid,
-                header_crc_part, payload, crc_wire):
-        if is_v2:
+            header_crc_part = h[0:9]
             self.frames_v2 += 1
         else:
+            plen, seq, sysid, compid, msgid = h[0], h[1], h[2], h[3], h[4]
+            header_crc_part = h[0:5]
             self.frames_v1 += 1
+        payload = body[:plen]
+        crc_wire = body[plen] | (body[plen + 1] << 8)
+        wire_len = (9 if self._is_v2 else 5) + plen + 2
+
         name = MSG_DEFS.get(msgid, (None,))[0]
         if name is None:
-            return Frame(is_v2=is_v2, seq=seq, sysid=sysid, compid=compid,
-                         msgid=msgid, name="UNK_%d" % msgid, fields={},
-                         wire_len=plen + (9 if is_v2 else 5) + 2,
-                         ts=time.time(), bad_crc=False)
-        crc_extra = MSG_DEFS[msgid][1]
-        calc = frame_crc(header_crc_part, payload, crc_extra)
+            # 未知消息: 没有 CRC_EXTRA, 无法校验 —— 计数并透传 id
+            self.unknown_frames += 1
+            return Frame(is_v2=self._is_v2, seq=seq, sysid=sysid,
+                         compid=compid, msgid=msgid, name="未知消息%d" % msgid,
+                         fields={}, wire_len=wire_len, ts=time.time(),
+                         crc_ok=None)
+        calc = frame_crc(header_crc_part, payload, MSG_DEFS[msgid][1])
         if calc != crc_wire:
             self.bad_frames += 1
             return None
-        return Frame(is_v2=is_v2, seq=seq, sysid=sysid, compid=compid,
-                     msgid=msgid, name=name,
-                     fields=self._decode(msgid, payload),
-                     wire_len=plen + (9 if is_v2 else 5) + 2,
-                     ts=time.time(), bad_crc=False)
+        return Frame(is_v2=self._is_v2, seq=seq, sysid=sysid, compid=compid,
+                     msgid=msgid, name=name, fields=self._decode(msgid, payload),
+                     wire_len=wire_len, ts=time.time(), crc_ok=True)
 
     @staticmethod
     def _decode(msgid, payload):
@@ -272,8 +258,6 @@ class Parser(object):
         fields = {}
         off = 0
         for name, t in spec:
-            if off >= len(payload) and "[" not in t:
-                break                       # v2 截断: 后面按 0 处理, 不再解
             if "[" in t:
                 base, n = t[:-1].split("[")
                 n = int(n)
@@ -285,19 +269,19 @@ class Parser(object):
                         "utf-8", "replace")
                 else:
                     fmt = "<%d%s" % (n, _SCALAR[base])
-                    vals = list(struct.unpack(fmt, chunk.ljust(n * sz, b"\x00")))
-                    # BATTERY_STATUS voltages 特例: 0xFFFF = 无此电芯
-                    if t == "u16[10]":
+                    chunk = chunk.ljust(n * sz, b"\x00")   # v2 截断补 0
+                    vals = list(struct.unpack(fmt, chunk))
+                    if t == "u16[10]:":                    # 不会走到,占位防御
                         vals = [v for v in vals if v != 0xFFFF]
                     fields[name] = vals
             else:
                 fmt = "<" + _SCALAR[t]
                 sz = struct.calcsize(fmt)
                 chunk = payload[off:off + sz]
-                if len(chunk) < sz:
-                    fields[name] = 0        # v2 截断尾
-                    continue
                 off += sz
+                if len(chunk) < sz:
+                    fields[name] = 0        # v2 截断尾按 0
+                    continue
                 fields[name] = struct.unpack(fmt, chunk)[0]
         return fields
 
@@ -305,7 +289,7 @@ class Parser(object):
 # ---------------- 帧构造 ----------------
 
 def encode(msgid, fields, sysid=255, compid=190, seq=0, is_v2=True):
-    """构造一帧 MAVLink。fields 为 {字段名: 值} 缺省补 0。
+    """构造一帧 MAVLink。fields 为 {字段名: 值}, 缺省补 0。
     sysid=255/compid=190 是地面站惯用值。返回 bytes。"""
     if msgid not in MSG_DEFS:
         raise ValueError("未支持的消息 id=%d" % msgid)
@@ -322,18 +306,13 @@ def encode(msgid, fields, sysid=255, compid=190, seq=0, is_v2=True):
             else:
                 if v is None:
                     v = []
-                if t == "u16[10]":
-                    v = list(v) + [0xFFFF] * (n - len(v))   # 无电芯填 0xFFFF
-                else:
-                    v = list(v) + [0] * (n - len(v))
+                v = list(v) + [0] * (n - len(v))
                 payload += struct.pack("<%d%s" % (n, _SCALAR[base]), *v[:n])
         else:
-            if v is None:
-                v = 0
-            payload += struct.pack("<" + _SCALAR[t], v)
+            payload += struct.pack("<" + _SCALAR[t],
+                                   0 if v is None else v)
     plen = len(payload)
     if is_v2:
-        # v2 允许且鼓励去掉尾部 0 的截断, 但为了简单稳定发送完整长度
         hdr = bytes([plen, 0, 0, seq & 0xFF, sysid & 0xFF, compid & 0xFF,
                      msgid & 0xFF, (msgid >> 8) & 0xFF, (msgid >> 16) & 0xFF])
         crc = frame_crc(hdr, bytes(payload), crc_extra)
@@ -355,7 +334,7 @@ def heartbeat(autopilot, mav_type, base_mode, custom_mode, sysid=255, compid=190
                   sysid=sysid, compid=compid, seq=seq)
 
 
-def command_long(command, p1=0, p2=0, p3=0, p4=0, p5=0, p6=0, p7=0,
+def command_long(command, p1=0.0, p2=0.0, p3=0.0, p4=0.0, p5=0.0, p6=0.0, p7=0.0,
                  target_system=1, target_component=1, sysid=255, compid=190, seq=0):
     return encode(76, dict(param1=p1, param2=p2, param3=p3, param4=p4,
                            param5=p5, param6=p6, param7=p7, command=command,
@@ -366,7 +345,7 @@ def command_long(command, p1=0, p2=0, p3=0, p4=0, p5=0, p6=0, p7=0,
 
 def request_data_stream(target_system=1, target_component=1, rate_hz=10,
                         sysid=255, compid=190, seq=0):
-    # stream_id=0 表示"全部流", start_stop=1 启动
+    """stream_id=0 表示"全部流", start_stop=1 启动(ArduPilot 一系常用)。"""
     return encode(66, dict(target_system=target_system,
                            target_component=target_component,
                            req_stream_id=0, req_message_rate=rate_hz,
@@ -376,17 +355,9 @@ def request_data_stream(target_system=1, target_component=1, rate_hz=10,
 
 def set_message_interval(msgid, interval_us, target_system=1, target_component=1,
                          sysid=255, compid=190, seq=0):
-    # MAV_CMD_SET_MESSAGE_INTERVAL (511): param1=msg_id param2=间隔us
+    """MAV_CMD_SET_MESSAGE_INTERVAL (511): PX4 一系常用。"""
     return command_long(511, p1=msgid, p2=interval_us,
                         target_system=target_system,
-                        target_component=target_component,
-                        sysid=sysid, compid=compid, seq=seq)
-
-
-def request_message(msgid, target_system=1, target_component=1,
-                    sysid=255, compid=190, seq=0):
-    # MAV_CMD_REQUEST_MESSAGE (512)
-    return command_long(512, p1=msgid, target_system=target_system,
                         target_component=target_component,
                         sysid=sysid, compid=compid, seq=seq)
 
@@ -413,7 +384,7 @@ MAV_TYPE_NAMES = {
     0: "通用", 1: "固定翼", 2: "四旋翼", 3: "共轴", 4: "直升机", 5: "飞艇",
     6: "气球", 7: "火箭", 8: "地面车", 9: "水面船", 10: "潜水器",
     11: "地面站", 12: "增程站", 18: "六旋翼", 19: "半四旋翼", 20: "八旋翼",
-    21: "三旋翼", 22: "四旋翼H", 23: "四旋翼X", 24: "垂直起降双桨", 25: "垂直起降四桨",
+    21: "三旋翼", 22: "四旋翼H", 23: "四旋翼X", 24: "垂起双桨", 25: "垂起四桨",
 }
 
 MAV_AUTOPILOT_NAMES = {
@@ -427,7 +398,7 @@ MAV_STATE_NAMES = {
 
 MAV_FIX_NAMES = {
     0: "无GPS", 1: "无定位", 2: "2D定位", 3: "3D定位",
-    4: "3D+DGPS", 5: "3D+RTK浮动", 6: "3D+RTK固定",
+    4: "3D+DGPS", 5: "RTK浮动", 6: "RTK固定",
 }
 
 CMD_RESULT_NAMES = {
@@ -439,15 +410,14 @@ STATUS_SEVERITY_NAMES = ["紧急", "警报", "严重", "错误", "警告",
                          "通知", "信息", "调试"]
 
 MAV_CMD_NAMES = {
-    16: "NAV_WAYPOINT", 22: "NAV_TAKEOFF", 21: "NAV_LAND", 31: "NAV_RETURN_TO_LAUNCH",
+    16: "NAV_WAYPOINT", 21: "NAV_LAND", 22: "NAV_TAKEOFF", 31: "NAV_RTL",
     85: "NAV_VTOL_TAKEOFF", 86: "NAV_VTOL_LAND", 176: "DO_SET_MODE",
-    179: "DO_SET_HOME", 250: "PREFLIGHT_CALIBRATION", 241: "PREFLIGHT_REBOOT_SHUTDOWN",
-    400: "COMPONENT_ARM_DISARM", 410: "CONTROL_HIGH_LATENCY",
-    511: "SET_MESSAGE_INTERVAL", 512: "REQUEST_MESSAGE",
-    519: "DO_SET_SERVO", 520: "DO_REPEAT_SERVO", 530: "DO_FLIGHTTERMINATION",
+    179: "DO_SET_HOME", 241: "REBOOT_SHUTDOWN", 250: "PREFLIGHT_CALIBRATION",
+    400: "COMPONENT_ARM_DISARM", 511: "SET_MESSAGE_INTERVAL",
+    512: "REQUEST_MESSAGE", 519: "DO_SET_SERVO", 530: "FLIGHTTERMINATION",
 }
 
-# --- ArduPilot 模式表(custom_mode 就是模式编号) ---
+# --- ArduPilot 模式表(custom_mode 就是模式编号, 按机型家族分表) ---
 ARDUPILOT_MODES = {
     2: {0: "STABILIZE", 1: "ACRO", 2: "ALT_HOLD", 3: "AUTO", 4: "GUIDED",
         5: "LOITER", 6: "RTL", 7: "CIRCLE", 9: "LAND", 11: "DRIFT",
@@ -463,13 +433,13 @@ ARDUPILOT_MODES = {
         10: "AUTO", 11: "RTL", 12: "SMART_RTL", 15: "GUIDED", 17: "INITIALISING"},
 }
 
-# --- PX4 模式表(custom_mode = main_mode<<16 | sub_mode<<8? 不: = main<<16|sub) ---
+# --- PX4 模式表: custom_mode = (main_mode << 24) | (sub_mode << 16) ---
 PX4_MAIN_MODES = {1: "MANUAL", 2: "ALTCTL", 3: "POSCTL", 4: "AUTO",
                   5: "ACRO", 6: "OFFBOARD", 7: "STABILIZED", 8: "RATTITUDE"}
 PX4_AUTO_SUB_MODES = {1: "READY", 2: "TAKEOFF", 3: "HOLD(LOITER)", 4: "MISSION",
                       5: "RTL", 6: "LAND", 7: "FOLLOW", 8: "PRECISION_LAND",
                       9: "VTOL_TAKEOFF", 10: "VTOL_LAND"}
-# GUI 下拉用: PX4 (main, sub) -> base_mode/custom_mode
+# GUI 下拉用: PX4 (显示名, main, sub)
 PX4_MODE_CHOICES = [
     ("MANUAL", 1, 0), ("STABILIZED", 7, 0), ("ACRO", 5, 0),
     ("RATTITUDE", 8, 0), ("ALTCTL", 2, 0), ("POSCTL", 3, 0),
@@ -477,6 +447,7 @@ PX4_MODE_CHOICES = [
     ("AUTO MISSION", 4, 4), ("AUTO RTL", 4, 5), ("AUTO LAND", 4, 6),
     ("OFFBOARD", 6, 0),
 ]
+# GUI 下拉用: ArduPilot 多旋翼 (显示名, custom_mode)
 ARDU_MODE_CHOICES = [
     ("STABILIZE", 0), ("ACRO", 1), ("ALT_HOLD", 2), ("AUTO", 3),
     ("GUIDED", 4), ("LOITER", 5), ("RTL", 6), ("CIRCLE", 7), ("LAND", 9),
@@ -492,9 +463,6 @@ def ardupilot_mode(mav_type, custom_mode):
 
 
 def px4_mode(custom_mode):
-    main = (custom_mode >> 16) & 0xFF
-    sub = (custom_mode >> 24) & 0xFF   # PX4: sub_mode 在高 8 位? 官方: main<<24|sub<<16
-    # 实际 PX4 定义: custom_mode = (main_mode << 24) | (sub_mode << 16)
     main = (custom_mode >> 24) & 0xFF
     sub = (custom_mode >> 16) & 0xFF
     m = PX4_MAIN_MODES.get(main, "主模式%d" % main)
@@ -515,14 +483,14 @@ def mode_name(autopilot, mav_type, base_mode, custom_mode):
 
 
 def fw_version_str(v):
-    """flight_sw_version 的打包格式: major<<24 | minor<<16 | patch<<8 | type"""
+    """flight_sw_version 打包格式: major<<24 | minor<<16 | patch<<8 | type"""
     if not v:
         return "-"
     return "%d.%d.%d" % ((v >> 24) & 0xFF, (v >> 16) & 0xFF, (v >> 8) & 0xFF)
 
 
 def quat_to_rpy(q1, q2, q3, q4):
-    """四元数 -> 欧拉角(弧度), 公式与 mavlink 官方一致。"""
+    """四元数 -> 欧拉角(弧度), 公式与 MAVLink 官方一致。"""
     import math
     roll = math.atan2(2 * (q1 * q2 + q3 * q4), 1 - 2 * (q2 * q2 + q3 * q3))
     pitch = math.asin(max(-1.0, min(1.0, 2 * (q1 * q3 - q2 * q4))))
@@ -548,12 +516,12 @@ def _selftest():
     check(f.name == "ATTITUDE" and abs(f.fields["roll"] - 0.1) < 1e-6
           and abs(f.fields["pitch"] + 0.2) < 1e-6, "v2 ATTITUDE 编解码往返")
 
-    # 2. v1 往返
+    # 2. v1 往返 + ArduPilot 模式
     raw = encode(0, dict(custom_mode=3, type=2, autopilot=3, base_mode=209,
                          system_status=4, mavlink_version=3), is_v2=False)
     f = Parser().feed(raw)[0]
     check(f.name == "HEARTBEAT" and not f.is_v2 and f.fields["custom_mode"] == 3
-          and mode_name(3, 2, 209, 3) == "AUTO", "v1 HEARTBEAT 往返 + ArduPilot 模式")
+          and mode_name(3, 2, 209, 3) == "AUTO", "v1 HEARTBEAT 往返 + 模式映射")
 
     # 3. 篡改 1 个比特必须被 CRC 拦下
     p = Parser()
@@ -564,7 +532,7 @@ def _selftest():
     out = p.feed(bytes(raw))
     check(len(out) == 0 and p.bad_frames == 1, "CRC 校验拦截坏帧")
 
-    # 4. 长消息 char[50] + 分片喂入(模拟串口粘包/断包)
+    # 4. char[50] 中文 + 分片喂入(模拟串口粘包/断包)
     p = Parser()
     raw = encode(253, dict(severity=6, text="Hello 世界 from PX4"))
     got = []
@@ -573,8 +541,8 @@ def _selftest():
     check(len(got) == 1 and got[0].fields["text"] == "Hello 世界 from PX4",
           "STATUSTEXT 中文 + 分片粘包")
 
-    # 5. v2 截断 payload(GPS_RAW_INT 只发 v1 部分)
-    _, ce, spec = MSG_DEFS[24]
+    # 5. v2 截断 payload(GPS_RAW_INT 只发 v1 部分, 扩展字段缺省)
+    ce = MSG_DEFS[24][1]
     full = bytearray(msg_size(24))
     struct.pack_into("<Q", full, 0, 123456789)
     full[8] = 3                              # fix_type
@@ -588,7 +556,7 @@ def _selftest():
           and f.fields["satellites_visible"] == 0,
           "v2 截断 payload 解析(扩展字段缺省为 0)")
 
-    # 6. 杂散字节 + 两个连续帧
+    # 6. 杂散字节 + 两个连续帧 + PX4 模式
     p = Parser()
     a = encode(0, dict(custom_mode=0, type=2, autopilot=12, base_mode=29,
                        system_status=3, mavlink_version=3))
@@ -599,7 +567,7 @@ def _selftest():
           and mode_name(12, 2, 29, 0) == "MANUAL"
           and abs(f2.fields["alt"] - 100.5) < 1e-5, "杂散字节 + 连续两帧")
 
-    # 7. PX4 模式解码: AUTO/MISSION => main=4 sub=4
+    # 7. PX4 模式位解码: AUTO/MISSION => main=4 sub=4
     check(px4_mode((4 << 24) | (4 << 16)) == "AUTO / MISSION", "PX4 模式位解码")
 
     # 8. COMMAND_LONG 往返(解锁指令)
@@ -608,8 +576,13 @@ def _selftest():
     check(f.name == "COMMAND_LONG" and f.fields["command"] == 400
           and abs(f.fields["param1"] - 1.0) < 1e-6, "COMMAND_LONG 解锁帧")
 
-    # 9. 四元数 -> 欧拉角
-    import math
+    # 9. 参数读取往返
+    raw = request_param_read("SER_TEL2_BAUD")
+    f = Parser().feed(raw)[0]
+    check(f.name == "PARAM_REQUEST_READ" and f.fields["param_id"] == "SER_TEL2_BAUD",
+          "PARAM_REQUEST_READ 参数名截断到16字节")
+
+    # 10. 四元数 -> 欧拉角(单位元)
     r, pi_, y = quat_to_rpy(1.0, 0.0, 0.0, 0.0)
     check(abs(r) < 1e-9 and abs(pi_) < 1e-9 and abs(y) < 1e-9, "单位四元数转欧拉角")
 
