@@ -1,4 +1,4 @@
-# 3-快捷截图
+# 3-快捷截图-linux-arm64-JetsonOrinNX
 
 按 **Shift + Alt + S** 框选屏幕区域 → 自动**复制到剪贴板**（可直接去微信/浏览器/WPS 里 Ctrl+V 粘贴），同时自动保存一份到 `~/Pictures/截图/`。
 
@@ -25,7 +25,7 @@
 ```
 
 想给它们也加快捷键：打开 设置 → 键盘 → 自定义快捷键，命令分别填
-`"/home/jsz/AAAFIXsystem/3-快捷截图/截图复制.sh" full` 和 `... window`。
+`"/home/jsz/AAAFIXsystem/3-快捷截图-linux-arm64-JetsonOrinNX/截图复制.sh" full` 和 `... window`。
 
 ## 修改快捷键
 

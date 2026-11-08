@@ -2,7 +2,7 @@
 Type=Application
 Name=网络修复工具
 Comment=修复 Jetson 无线/有线间歇性断网
-Exec=/home/jsz/AAAFIXsystem/2-网络修复/启动网络修复.sh
+Exec=/home/jsz/AAAFIXsystem/2-网络修复-linux-arm64-JetsonOrinNX/启动网络修复.sh
 Icon=network-wireless
 Terminal=false
 Categories=System;Settings;

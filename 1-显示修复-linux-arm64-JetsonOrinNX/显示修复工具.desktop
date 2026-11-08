@@ -2,7 +2,7 @@
 Type=Application
 Name=显示修复工具
 Comment=修复 Jetson HDMI 无输出 / 物理显示器黑屏(NoMachine正常)
-Exec=/home/jsz/AAAFIXsystem/1-显示修复/启动显示修复.sh
+Exec=/home/jsz/AAAFIXsystem/1-显示修复-linux-arm64-JetsonOrinNX/启动显示修复.sh
 Icon=video-display
 Terminal=false
 Categories=System;Settings;

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================================
-#  截图并复制  ——  AAAFIXsystem / 3-快捷截图
+#  截图并复制  ——  AAAFIXsystem / 3-快捷截图-linux-arm64-JetsonOrinNX
 #  用法: ./截图复制.sh [area|full|window]   (默认 area = 鼠标框选)
 #    area   : 框选屏幕区域(默认)
 #    full   : 整个屏幕
