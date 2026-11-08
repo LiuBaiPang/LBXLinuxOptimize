@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JJ30 串口资料手册 — Jetson Orin NX (P3768 载板)</title>
+<style>
+  :root{
+    --bg:#14181f; --card:#1c2330; --card2:#242d3c; --line:#2b3547;
+    --fg:#e9eef6; --sub:#93a1b5; --acc:#3d8bfd; --ok:#2ecc71;
+    --bad:#e05561; --warn:#f0a020; --input:#10151d;
+  }
+  *{box-sizing:border-box}
+  body{background:var(--bg);color:var(--fg);font-family:"Noto Sans CJK SC","PingFang SC",sans-serif;
+       margin:0;padding:0 0 60px;line-height:1.75}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 20px}
+  h1{font-size:30px;margin:34px 0 6px}
+  h2{font-size:22px;margin:44px 0 12px;padding:8px 14px;background:var(--card);
+     border-left:5px solid var(--acc);border-radius:6px}
+  h3{font-size:17px;margin:26px 0 10px;color:var(--acc)}
+  h4.step{display:inline-block;background:var(--acc);color:#fff;border-radius:6px;
+          padding:2px 12px;font-size:14px;margin-right:8px}
+  a{color:var(--acc);text-decoration:none}
+  a:hover{text-decoration:underline}
+  code,.mono{font-family:"JetBrains Mono","Noto Sans Mono CJK SC",Consolas,monospace;
+      background:var(--input);border:1px solid var(--line);border-radius:4px;
+      padding:1px 6px;font-size:.92em;color:#cfe3ff}
+  pre{background:var(--input);border:1px solid var(--line);border-radius:8px;
+      padding:14px 16px;overflow-x:auto;font-size:13.5px;line-height:1.6}
+  pre code{background:none;border:none;padding:0}
+  table{border-collapse:collapse;width:100%;margin:12px 0;font-size:14px}
+  th,td{border:1px solid var(--line);padding:7px 10px;text-align:left;vertical-align:top}
+  th{background:var(--card2)}
+  tr:nth-child(even) td{background:rgba(255,255,255,.02)}
+  .badge{display:inline-block;background:var(--card2);border:1px solid var(--line);
+     border-radius:20px;padding:3px 14px;font-size:13px;color:var(--sub);margin-right:8px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;
+        padding:16px 20px;margin:14px 0}
+  .warnbox{background:rgba(224,85,97,.10);border:1px solid var(--bad);border-radius:10px;
+        padding:12px 18px;margin:14px 0}
+  .okbox{background:rgba(46,204,113,.08);border:1px solid var(--ok);border-radius:10px;
+        padding:12px 18px;margin:14px 0}
+  .tipbox{background:rgba(61,139,253,.08);border:1px solid var(--acc);border-radius:10px;
+        padding:12px 18px;margin:14px 0}
+  nav{background:var(--card);border:1px solid var(--line);border-radius:10px;
+      padding:12px 18px;margin:18px 0}
+  nav a{margin-right:16px;white-space:nowrap}
+  /* ---- 40针排针图 ---- */
+  .pinwrap{display:flex;gap:18px;flex-wrap:wrap;align-items:flex-start;margin:16px 0}
+  .pinhead{width:460px;border-collapse:collapse}
+  .pinhead td{border:none;padding:3px 4px;font-size:12.5px;font-family:monospace}
+  .pin{display:flex;align-items:center;gap:6px}
+  .pin .num{width:26px;height:26px;border-radius:6px;background:var(--input);
+     border:1px solid var(--line);display:flex;align-items:center;justify-content:center;
+     font-weight:bold;flex-shrink:0}
+  .pin .lbl{flex:1;border-radius:6px;padding:3px 8px;white-space:nowrap}
+  .pin.even{flex-direction:row-reverse;text-align:right}
+  .p5v   .lbl{background:#7a2c33;color:#ffb3ba}
+  .p3v   .lbl{background:#7a4a2c;color:#ffd9b3}
+  .pgnd  .lbl{background:#1e4d33;color:#a8f0c6}
+  .puart .lbl{background:#1d3a63;color:#9ec9ff;box-shadow:0 0 0 1.5px var(--acc)}
+  .pi2c  .lbl{background:#154a4a;color:#9be8e8}
+  .pspi  .lbl{background:#3d2a63;color:#d0bfff}
+  .pi2s  .lbl{background:#2f3a4f;color:#b9c6dc}
+  .pgpio .lbl{background:#3a4150;color:#cdd6e4}
+  .legend{display:flex;flex-wrap:wrap;gap:10px;font-size:13px;margin:10px 0}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .legend i{width:14px;height:14px;border-radius:4px;display:inline-block}
+  .u{background:#1d3a63;box-shadow:0 0 0 1.5px var(--acc)}
+  .p{background:#7a2c33}.v{background:#7a4a2c}.g{background:#1e4d33}
+  .c{background:#154a4a}.s{background:#3d2a63}.a{background:#2f3a4f}.o{background:#3a4150}
+  .small{font-size:12.5px;color:var(--sub)}
+  .center{text-align:center}
+  footer{margin-top:50px;border-top:1px solid var(--line);padding-top:16px;
+         color:var(--sub);font-size:13px}
+  @media print{ body{background:#fff;color:#000} .card,pre,nav{background:#f5f5f5;border-color:#ccc} }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>串口资料手册</h1>
+<div>
+  <span class="badge">NVIDIA Jetson Orin NX(P3767 模组)</span>
+  <span class="badge">P3768 开发套件载板</span>
+  <span class="badge">L4T R35.6.4 / JetPack 5.1.4</span>
+  <span class="badge">本手册数据已在 2026-11-08 于本机实测核验</span>
+</div>
+
+<p>本手册是《串口监控工具》的配套资料。每个主题都按固定四段展开:
+<b>① 针脚定义 → ② 一般用法 → ③ 原文链接 → ④ 示例</b>。</p>
+
+<nav>
+  <a href="#s0">0. 快速上手</a>
+  <a href="#s1">1. 40-pin 排针定义</a>
+  <a href="#s2">2. 本机串口设备一览</a>
+  <a href="#s3">3. UART1 专题(40-pin 串口)</a>
+  <a href="#s4">4. 连接飞控(MAVLink)</a>
+  <a href="#s5">5. 其他串口专题</a>
+  <a href="#s6">6. 代码示例汇总</a>
+  <a href="#s7">7. 故障排查</a>
+</nav>
+
+<!-- ===================== 0 快速上手 ===================== -->
+<h2 id="s0">0. 快速上手:30 秒看懂怎么接飞控</h2>
+
+<div class="okbox">
+<b>你的飞控现在已经能用了!</b> 探测发现一台 Auterion PX4 FMU v6C 正插在 USB 上,
+对应 <code>/dev/ttyACM0</code> —— 打开《串口监控工具》→「飞控 MAVLink」页 →
+端口选 <code>ttyACM0</code>、波特率 115200 → 连接,就能看到心跳、姿态、电量等实时遥测。
+USB 直连<b>不需要任何接线</b>,是调试期最安全的方式。
+</div>
+
+<p>想把飞控装到机上、摆脱 USB 线,用 40-pin 排针的 UART(脚 8 发送 / 脚 10 接收 / 脚 6 共地):</p>
+
+<table>
+<tr><th>Jetson 40-pin</th><th>接</th><th>飞控 TELEM 口(Pixhawk 标准)</th><th>作用</th></tr>
+<tr><td><b>脚 8</b> UART1_TX</td><td>→</td><td><b>RX</b></td><td>Jetson 发数据给飞控</td></tr>
+<tr><td><b>脚 10</b> UART1_RX</td><td>←</td><td><b>TX</b></td><td>飞控发数据给 Jetson</td></tr>
+<tr><td><b>脚 6</b> GND</td><td>—</td><td><b>GND</b></td><td>共地,<b>必须接</b></td></tr>
+<tr><td>不接电源脚</td><td></td><td>5V/VCC</td><td>除非你明确要用一路给对方供电</td></tr>
+</table>
+
+<div class="warnbox">
+⚠ 40-pin 的串口出厂被系统占用为内核控制台 + 登录终端,
+<b>接飞控前必须先"释放"</b>:在工具的「资料」页点【释放40-pin串口】(输一次密码,重启生效)。
+详见 <a href="#s3">第 3 节</a>。
+</div>
+
+<!-- ===================== 1 40pin ===================== -->
+<h2 id="s1">1. 40-pin 扩展排针(J12)完整引脚定义</h2>
+
+<p>来源: NVIDIA 官方《载板规格书》Table 3-3,并用本机预装的 NVIDIA Jetson.GPIO 库
+(JETSON_ORIN_NX_PIN_DEFS)逐脚交叉核验,<b>两源一致</b>。</p>
+
+<h3>① 针脚定义</h3>
+
+<div class="legend">
+  <span><i class="u"></i> UART(串口)</span>
+  <span><i class="p"></i> 5V 电源</span>
+  <span><i class="v"></i> 3.3V 电源</span>
+  <span><i class="g"></i> GND</span>
+  <span><i class="c"></i> I2C</span>
+  <span><i class="s"></i> SPI</span>
+  <span><i class="a"></i> I2S/音频</span>
+  <span><i class="o"></i> GPIO/PWM</span>
+</div>
+
+<div class="pinwrap">
+<table class="pinhead">
+  <tr>
+    <td><div class="pin"><span class="num">1</span><span class="lbl p3v">3.3V 电源(最大 1A)</span></div></td>
+    <td><div class="pin even"><span class="num">2</span><span class="lbl p5v">5.0V 电源(最大 1A)</span></div></td>
+  </tr>
+  <tr>
+    <td><div class="pin"><span class="num">3</span><span class="lbl pi2c">I2C1_SDA(I2C 总线7)</span></div></td>
+    <td><div class="pin even"><span class="num">4</span><span class="lbl p5v">5.0V 电源(最大 1A)</span></div></td>
+  </tr>
+  <tr>
+    <td><div class="pin"><span class="num">5</span><span class="lbl pi2c">I2C1_SCL(I2C 总线7)</span></div></td>
+    <td><div class="pin even"><span class="num">6</span><span class="lbl pgnd">GND ← 串口共地用这个</span></div></td>
+  </tr>
+  <tr>
+    <td><div class="pin"><span class="num">7</span><span class="lbl pgpio">GPIO09(可复用音频主时钟)</span></div></td>
+    <td><div class="pin even"><span class="num">8</span><span class="lbl puart">UART1_TXD → /dev/ttyAMA0</span></div></td>
+  </tr>
+  <tr>
+    <td><div class="pin"><span class="num">9</span><span class="lbl pgnd">GND</span></div></td>
+    <td><div class="pin even"><span class="num">10</span><span class="lbl puart">UART1_RXD → /dev/ttyAMA0</span></div></td>
+  </tr>
+  <tr>
+    <td><div class="pin"><span class="num">11</span><span class="lbl puart">UART1_RTS*(流控)</span></div></td>
+    <td><div class="pin even"><span class="num">12</span><span class="lbl pi2s">I2S0_SCLK(音频)</span></div></td>
+  </tr>
+  <tr>
+    <td><div class="pin"><span class="num">13</span><span class="lbl pspi">SPI1_SCK</span></div></td>
+    <td><div class="pin even"><span class="num">14</span><span class="lbl pgnd">GND(也可作串口共地)</span></div></td>
+  </tr>
+  <tr>
+    <td><div class="pin"><span class="num">15</span><span class="lbl pgpio">GPIO12(复用 PWM1)</span></div></td>
+    <td><div class="pin even"><span class="num">16</span><span class="lbl pspi">SPI1_CS1*</span></div></td>
+  </tr>
+  <tr>
+    <td><div class="pin"><span class="num">17</span><span class="lbl p3v">3.3V 电源(最大 1A)</span></div></td>
+    <td><div class="pin even"><span class="num">18</span><span class="lbl pspi">SPI1_CS0*</span></div></td>
+  </tr>
+  <tr>
+    <td><div class="pin"><span class="num">19</span><span class="lbl pspi">SPI0_MOSI</span></div></td>
+    <td><div class="pin even"><span class="num">20</span><span class="lbl pgnd">GND</span></div></td>
+  </tr>
+  <tr>
+    <td><div class="pin"><span class="num">21</span><span class="lbl pspi">SPI0_MISO</span></div></td>
+    <td><div class="pin even"><span class="num">22</span><span class="lbl pspi">SPI1_MISO</span></div></td>
+  </tr>
+  <tr>
+    <td><div class="pin"><span class="num">23</span><span class="lbl pspi">SPI0_SCK</span></div></td>
+    <td><div class="pin even"><span class="num">24</span><span class="lbl pspi">SPI0_CS0*</span></div></td>
+  </tr>
+  <tr>
+    <td><div class="pin"><span class="num">25</span><span class="lbl pgnd">GND</span></div></td>
+    <td><div class="pin even"><span class="num">26</span><span class="lbl pspi">SPI0_CS1*</span></div></td>
+  </tr>
+  <tr>
+    <td><div class="pin"><span class="num">27</span><span class="lbl pi2c">I2C0_SDA(I2C 总线1)</span></div></td>
+    <td><div class="pin even"><span class="num">28</span><span class="lbl pi2c">I2C0_SCL(I2C 总线1)</span></div></td>
+  </tr>
+  <tr>
+    <td><div class="pin"><span class="num">29</span><span class="lbl pgpio">GPIO01(可复用通用时钟#0)</span></div></td>
+    <td><div class="pin even"><span class="num">30</span><span class="lbl pgnd">GND</span></div></td>
+  </tr>
+  <tr>
+    <td><div class="pin"><span class="num">31</span><span class="lbl pgpio">GPIO11(可复用通用时钟#1)</span></div></td>
+    <td><div class="pin even"><span class="num">32</span><span class="lbl pgpio">GPIO07(复用 PWM7)</span></div></td>
+  </tr>
+  <tr>
+    <td><div class="pin"><span class="num">33</span><span class="lbl pgpio">GPIO13(复用 PWM)</span></div></td>
+    <td><div class="pin even"><span class="num">34</span><span class="lbl pgnd">GND</span></div></td>
+  </tr>
+  <tr>
+    <td><div class="pin"><span class="num">35</span><span class="lbl pi2s">I2S0_FS(音频帧时钟)</span></div></td>
+    <td><div class="pin even"><span class="num">36</span><span class="lbl puart">UART1_CTS*(流控)</span></div></td>
+  </tr>
+  <tr>
+    <td><div class="pin"><span class="num">37</span><span class="lbl pspi">SPI1_MOSI</span></div></td>
+    <td><div class="pin even"><span class="num">38</span><span class="lbl pi2s">I2S0_DIN(音频入)</span></div></td>
+  </tr>
+  <tr>
+    <td><div class="pin"><span class="num">39</span><span class="lbl pgnd">GND</span></div></td>
+    <td><div class="pin even"><span class="num">40</span><span class="lbl pi2s">I2S0_DOUT(音频出)</span></div></td>
+  </tr>
+</table>
+
+<div class="card small" style="max-width:520px">
+<p><b>读图说明:</b></p>
+<p>① 排针两排,左列 = 奇数脚(1,3,5…39),右列 = 偶数脚(2,4,6…40),引脚 1 在顶部(板上通常有白三角/丝印"1")。</p>
+<p>② <b>所有信号都是 3.3V 电平</b>——接 5V 电平信号会烧 SoC!反过来给飞控的 TELEM 口(也是 3.3V)是安全的。</p>
+<p>③ 名字带 <b>*</b> 的脚(UART1_RTS/CTS、SPI1_CS0/CS1、SPI0_CS0/CS1)经过 TXB0108 电平转换器,驱动能力很弱(±20µA 级),适合接双向外设,不能直接灌负载。</p>
+<p>④ 电源脚能力:每个电源引脚最大 1A(规格书 Note 1)。</p>
+<p>⑤ CAN 不在 40-pin 上——载板有一个独立的 4-pin CAN 座(默认未启用,需要在设备树里开启 can0/can1 才会出现接口)。</p>
+</div>
+</div>
+
+<h3>② 完整对照表(含 SoC 引脚名)</h3>
+
+<table>
+<tr><th>脚</th><th>模块信号名</th><th>SoC 端口</th><th>默认功能</th><th>复用功能</th><th>备注</th></tr>
+<tr><td>1</td><td>—</td><td>—</td><td>3.3V 电源</td><td>—</td><td>最大 1A</td></tr>
+<tr><td>2</td><td>—</td><td>—</td><td>5.0V 电源</td><td>—</td><td>最大 1A</td></tr>
+<tr><td>3</td><td>I2C1_SDA</td><td>GP16_I2C8_DAT</td><td>I2C 总线7 数据</td><td>GPIO</td><td>2.2kΩ 上拉</td></tr>
+<tr><td>4</td><td>—</td><td>—</td><td>5.0V 电源</td><td>—</td><td></td></tr>
+<tr><td>5</td><td>I2C1_SCL</td><td>GP15_I2C8_CLK</td><td>I2C 总线7 时钟</td><td>GPIO</td><td>2.2kΩ 上拉</td></tr>
+<tr><td>6</td><td>—</td><td>—</td><td>GND</td><td>—</td><td><b>串口共地推荐</b></td></tr>
+<tr><td>7</td><td>GPIO09</td><td>GP167</td><td>GPIO</td><td>音频主时钟</td><td></td></tr>
+<tr class="uart-hl"><td><b>8</b></td><td><b>UART1_TXD</b></td><td>GP70_UART1_TXD</td><td><b>UART1 发送</b></td><td>GPIO</td><td><b>→ /dev/ttyAMA0,接飞控 RX</b></td></tr>
+<tr><td>9</td><td>—</td><td>—</td><td>GND</td><td>—</td><td></td></tr>
+<tr class="uart-hl"><td><b>10</b></td><td><b>UART1_RXD</b></td><td>GP71_UART1_RXD</td><td><b>UART1 接收</b></td><td>GPIO</td><td><b>→ /dev/ttyAMA0,接飞控 TX</b></td></tr>
+<tr><td>11</td><td>UART1_RTS*</td><td>GP72_UART1_RTS_N</td><td>UART1 请求发送</td><td>GPIO</td><td>经 TXB0108,一般不接</td></tr>
+<tr><td>12</td><td>I2S0_SCLK</td><td>GP122</td><td>GPIO</td><td>音频 I2S0 时钟</td><td></td></tr>
+<tr><td>13</td><td>SPI1_SCK</td><td>GP36_SPI3_CLK</td><td>GPIO</td><td>SPI1 时钟</td><td></td></tr>
+<tr><td>14</td><td>—</td><td>—</td><td>GND</td><td>—</td><td>离串口近的另一个地</td></tr>
+<tr><td>15</td><td>GPIO12</td><td>GP88_PWM1</td><td>GPIO</td><td>PWM1(3280000.pwm)</td><td></td></tr>
+<tr><td>16</td><td>SPI1_CS1*</td><td>GP40_SPI3_CS1_N</td><td>GPIO</td><td>SPI1 片选1</td><td>经 TXB0108</td></tr>
+<tr><td>17</td><td>—</td><td>—</td><td>3.3V 电源</td><td>—</td><td>最大 1A</td></tr>
+<tr><td>18</td><td>SPI1_CS0*</td><td>GP39_SPI3_CS0_N</td><td>GPIO</td><td>SPI1 片选0</td><td>经 TXB0108</td></tr>
+<tr><td>19</td><td>SPI0_MOSI</td><td>GP49_SPI1_MOSI</td><td>GPIO</td><td>SPI0 主出</td><td></td></tr>
+<tr><td>20</td><td>—</td><td>—</td><td>GND</td><td>—</td><td></td></tr>
+<tr><td>21</td><td>SPI0_MISO</td><td>GP48_SPI1_MISO</td><td>GPIO</td><td>SPI0 主入</td><td></td></tr>
+<tr><td>22</td><td>SPI1_MISO</td><td>GP37_SPI3_MISO</td><td>GPIO</td><td>SPI1 主入</td><td></td></tr>
+<tr><td>23</td><td>SPI0_SCK</td><td>GP47_SPI1_CLK</td><td>GPIO</td><td>SPI0 时钟</td><td></td></tr>
+<tr><td>24</td><td>SPI0_CS0*</td><td>GP50_SPI1_CS0_N</td><td>GPIO</td><td>SPI0 片选0</td><td>经 TXB0108</td></tr>
+<tr><td>25</td><td>—</td><td>—</td><td>GND</td><td>—</td><td></td></tr>
+<tr><td>26</td><td>SPI0_CS1*</td><td>GP51_SPI1_CS1_N</td><td>GPIO</td><td>SPI0 片选1</td><td>经 TXB0108</td></tr>
+<tr><td>27</td><td>I2C0_SDA</td><td>GP14_I2C2_DAT</td><td>GPIO</td><td>I2C 总线1 数据</td><td>1.5kΩ 上拉</td></tr>
+<tr><td>28</td><td>I2C0_SCL</td><td>GP13_I2C2_CLK</td><td>GPIO</td><td>I2C 总线1 时钟</td><td>1.5kΩ 上拉</td></tr>
+<tr><td>29</td><td>GPIO01</td><td>GP65</td><td>GPIO</td><td>通用时钟 #0</td><td></td></tr>
+<tr><td>30</td><td>—</td><td>—</td><td>GND</td><td>—</td><td></td></tr>
+<tr><td>31</td><td>GPIO11</td><td>GP66</td><td>GPIO</td><td>通用时钟 #1</td><td></td></tr>
+<tr><td>32</td><td>GPIO07</td><td>GP113_PWM7</td><td>GPIO</td><td>PWM7</td><td></td></tr>
+<tr><td>33</td><td>GPIO13</td><td>GP115</td><td>GPIO</td><td>PWM(32c0000.pwm)</td><td></td></tr>
+<tr><td>34</td><td>—</td><td>—</td><td>GND</td><td>—</td><td></td></tr>
+<tr><td>35</td><td>I2S0_FS</td><td>GP125</td><td>GPIO</td><td>音频 I2S0 帧时钟</td><td></td></tr>
+<tr><td>36</td><td>UART1_CTS*</td><td>GP73_UART1_CTS_N</td><td>UART1 清除发送</td><td>GPIO</td><td>经 TXB0108,一般不接</td></tr>
+<tr><td>37</td><td>SPI1_MOSI</td><td>GP38_SPI3_MOSI</td><td>GPIO</td><td>SPI1 主出</td><td></td></tr>
+<tr><td>38</td><td>I2S0_DIN</td><td>GP124</td><td>GPIO</td><td>音频 I2S0 数据入</td><td></td></tr>
+<tr><td>39</td><td>—</td><td>—</td><td>GND</td><td>—</td><td></td></tr>
+<tr><td>40</td><td>I2S0_DOUT</td><td>GP123</td><td>GPIO</td><td>音频 I2S0 数据出</td><td></td></tr>
+</table>
+
+<div class="tipbox small">
+📌 <b>网上资料纠错:</b> 部分教程(含 jetsonhacks 页面)把 SPI1_SCK 标在第 15 脚、GPIO12 标在第 13 脚——
+<b>这是错的</b>(NVIDIA 载板规格书 Figure 3-1 同样画错)。以规格书 Table 3-3 与官方 Jetson.GPIO 库为准:
+<b>13 = SPI1_SCK,15 = GPIO12(PWM1)</b>。本手册已按双源一致的标准修正。
+</div>
+
+<h3>③ 原文链接</h3>
+<ul>
+  <li>NVIDIA 官方《Jetson Orin Nano Developer Kit Carrier Board Specification》(Orin NX 开发套件同用此载板,40-pin 表在第 3.3 节 / PDF 第 21–23 页):
+      <a href="https://developer.nvidia.com/downloads/assets/embedded/secure/jetson/orin_nano/docs/jetson_orin_nano_devkit_carrier_board_specification_sp.pdf" target="_blank">官方 PDF 直链</a></li>
+  <li>NVIDIA Jetson Orin NX Developer Kit 用户指南:
+      <a href="https://developer.nvidia.com/embedded/learn/jetson-orin-nx-devkit-user-guide" target="_blank">developer.nvidia.com/embedded/learn/jetson-orin-nx-devkit-user-guide</a></li>
+  <li>NVIDIA Jetson.GPIO 库(含每块板的引脚定义源码):
+      <a href="https://github.com/NVIDIA/jetson-gpio" target="_blank">github.com/NVIDIA/jetson-gpio</a></li>
+  <li>社区引脚图(布局正确,SPI1 位置有误,仅作参考):
+      <a href="https://jetsonhacks.com/nvidia-jetson-orin-nano-gpio-header-pinout/" target="_blank">jetsonhacks.com — Orin GPIO Header Pinout</a></li>
+</ul>
+
+<h3>④ 示例</h3>
+<p>验证"引脚 1 在哪 + 电平对不对"(万用表直流电压档):</p>
+<pre><code># 断电时先目视: 板上丝印小三角对应的脚 = 脚1
+# 上电后:
+脚1/17 对 脚6(GND) 应量到 ≈ 3.3V     ← 证明方向没数错
+脚2/4  对 脚6(GND) 应量到 ≈ 5.0V
+脚8(UART1_TX) 静止时对地 ≈ 3.3V      ← 空闲态 TX 常为高电平</code></pre>
+
+<!-- ===================== 2 设备一览 ===================== -->
+<h2 id="s2">2. 本机串口设备一览(实测)</h2>
+
+<p>以下为 2026-11-08 在本机 <code>/dev</code> 实测的串口设备与状态(《串口监控工具》总览页会实时刷新同样的信息):</p>
+
+<table>
+<tr><th>设备</th><th>硬件</th><th>外露位置</th><th>当前状态</th><th>权限/可用性</th><th>适用场景</th></tr>
+<tr><td><b>/dev/ttyAMA0</b></td><td>31d0000.serial<br>(SBSA PL011,"UART1")</td><td><b>40-pin 排针 脚8/10</b></td><td>被内核控制台(console=ttyAMA0)+ 登录终端(serial-getty)占用</td><td>root:tty 0620,需先"释放"</td><td><b>接飞控/外设的首选</b></td></tr>
+<tr><td><b>/dev/ttyACM0</b></td><td>USB CDC-ACM</td><td>USB 口(你插的 PX4 飞控)</td><td>空闲,免 sudo 可用</td><td>dialout 组可读写</td><td>USB 直连飞控调试</td></tr>
+<tr><td>/dev/ttyTHS0</td><td>3100000.serial(UARTA)</td><td>未外露(走 M.2 Key E 槽的 UART0,1.8V,给 WiFi/BT 模组)</td><td>空闲</td><td>dialout 组可读写</td><td>软件测试/自环实验</td></tr>
+<tr><td>/dev/ttyTHS3</td><td>3130000.serial(UARTC)</td><td>载板未布线到外露接口</td><td>空闲</td><td>dialout 组可读写</td><td>软件测试</td></tr>
+<tr><td>/dev/ttyTHS4</td><td>3140000.serial(UARTD)</td><td>载板未布线到外露接口</td><td>空闲</td><td>dialout 组可读写</td><td>软件测试</td></tr>
+<tr><td>/dev/ttyTCU0</td><td>3c10000.combined-uart</td><td>调试串口(TCU)</td><td>内核控制台,115200</td><td>root:tty,不建议动</td><td>看内核/启动日志(需 root)</td></tr>
+<tr><td>/dev/ttyGS0</td><td>USB gadget 虚拟串口</td><td>USB-C(连 PC 时 PC 上出现虚拟 COM)</td><td>getty 占用</td><td>—</td><td>PC ↔ Jetson 串口互通</td></tr>
+<tr><td>/dev/ttyS0~3</td><td>serial8250 遗留探测</td><td>无真实硬件</td><td>假设备</td><td>可打开但无数据</td><td>忽略即可</td></tr>
+</table>
+
+<div class="tipbox small">📌 波特率上限:40-pin 的 ttyAMA0(PL011)支持到 4Mbps;ttyTHS*(Tegra 高速口)标称最高 12.5Mbps(驱动视配置)。
+飞控常用的 57600/115200/230400 都轻松胜任。</div>
+
+<!-- ===================== 3 UART1 专题 ===================== -->
+<h2 id="s3">3. UART1 专题:40-pin 串口(/dev/ttyAMA0)</h2>
+
+<h3>① 针脚定义</h3>
+<table>
+<tr><th>40-pin 脚位</th><th>信号</th><th>方向(Jetson 视角)</th><th>说明</th></tr>
+<tr><td><b>8</b></td><td>UART1_TXD</td><td>输出</td><td>Jetson 发送 → 接对方 RX</td></tr>
+<tr><td><b>10</b></td><td>UART1_RXD</td><td>输入</td><td>Jetson 接收 ← 接对方 TX</td></tr>
+<tr><td>6 或 14 或 9</td><td>GND</td><td>—</td><td>共地(任选一个,建议 6)</td></tr>
+<tr><td>11</td><td>UART1_RTS</td><td>输出</td><td>硬件流控,一般不用</td></tr>
+<tr><td>36</td><td>UART1_CTS</td><td>输入</td><td>硬件流控,一般不用</td></tr>
+</table>
+
+<h3>② 一般用法(重要:先释放再使用!)</h3>
+<p>出厂时这个口被系统这样占用:</p>
+<pre><code>/boot/extlinux/extlinux.conf → ... console=ttyAMA0,115200 ...   ← 内核日志打到脚8
+systemctl status serial-getty@ttyAMA0                            ← 登录终端占用整个口</code></pre>
+<p>后果:飞控数据里会混进内核日志和 <code>jetson login:</code> 提示,普通用户还只有只写权限。
+<b>《串口监控工具》→「资料」页 →【释放40-pin串口】一键完成</b>(等价于手工做下面三件事):</p>
+<pre><code># 1. 停用串口登录终端(立即生效)
+sudo systemctl disable --now serial-getty@ttyAMA0
+
+# 2. 从启动参数去掉 console=ttyAMA0(需重启生效; 先备份!)
+sudo cp /boot/extlinux/extlinux.conf /boot/extlinux/extlinux.conf.bak
+sudo sed -i 's/ console=ttyAMA0,115200//' /boot/extlinux/extlinux.conf
+
+# 3. 设备放权给 dialout 组(免 sudo 读写)
+echo 'KERNEL=="ttyAMA0", GROUP="dialout", MODE="0660"' | \
+  sudo tee /etc/udev/rules.d/99-aaafix-uart.rules
+
+# 4. 重启
+sudo reboot</code></pre>
+
+<p>释放完以后,正常使用就三步:</p>
+<pre><code># 看这个口有没有数据流进来(波特率要和对方一致)
+stty -F /dev/ttyAMA0 115200 raw -echo
+xxd /dev/ttyAMA0          # Ctrl+C 退出
+
+# 发一句话出去
+echo -n "hello" > /dev/ttyAMA0</code></pre>
+
+<div class="tipbox">💡 <b>验证接线是否正确的绝招——回环测试:</b> 断电状态下用杜邦线把脚 8 和脚 10 短接,
+然后在工具「串口终端」页打开 ttyAMA0,随便打字——<b>能回显自己发的字 = 板上 TX/RX 正常</b>;
+再断开短接,把飞控接上,看到 MAVLink 乱码(以 0xFD/0xFE 开头的十六进制流)= 线通、波特率对。</div>
+
+<h3>③ 原文链接</h3>
+<ul>
+  <li>NVIDIA Jetson Linux 开发指南 · UART 章节(串口驱动/设备树/引脚配置):
+      <a href="https://docs.nvidia.com/jetson/archives/r35.6.1/DeveloperGuide/text/HR/ControllerAndPeripherals/Uart.html" target="_blank">docs.nvidia.com · R35.6.1 UART</a></li>
+  <li>NVIDIA 论坛(官方确认 40-pin UART = /dev/ttyAMA0):
+      <a href="https://forums.developer.nvidia.com/t/jetson-orin-nano-uart-for-comms-with-external-mcu/" target="_blank">Orin Nano 40-pin UART 映射讨论</a></li>
+  <li>载板规格书(40-pin 表 + "所有信号 3.3V 电平"声明):
+      <a href="https://developer.nvidia.com/downloads/assets/embedded/secure/jetson/orin_nano/docs/jetson_orin_nano_devkit_carrier_board_specification_sp.pdf" target="_blank">官方 PDF</a></li>
+</ul>
+
+<h3>④ 示例</h3>
+<p>最小可用程序(C 语言,termios 原生调用,编译 <code>gcc uart_demo.c -o uart_demo</code>):</p>
+<pre><code class="c">#include &lt;stdio.h&gt;
+#include &lt;string.h&gt;
+#include &lt;unistd.h&gt;
+#include &lt;fcntl.h&gt;
+#include &lt;errno.h&gt;
+#include &lt;termios.h&gt;
+
+int main(void) {
+    int fd = open("/dev/ttyAMA0", O_RDWR | O_NOCTTY | O_NONBLOCK);
+    if (fd &lt; 0) { perror("打开串口失败"); return 1; }
+
+    struct termios tio;
+    tcgetattr(fd, &amp;tio);
+    cfmakeraw(&amp;tio);                      /* 原始模式: 不做任何转换 */
+    cfsetispeed(&amp;tio, B115200);           /* 波特率 115200 */
+    cfsetospeed(&amp;tio, B115200);
+    tio.c_cflag |= CREAD | CLOCAL;        /* 使能接收 */
+    tio.c_cc[VMIN] = 0;                   /* 非阻塞读 */
+    tio.c_cc[VTIME] = 5;                  /* 0.5 秒超时 */
+    tcsetattr(fd, TCSANOW, &amp;tio);
+
+    char buf[256];
+    for (int i = 0; i &lt; 10; i++) {
+        int n = write(fd, "ping\n", 5);   /* 发送 */
+        printf("发出 %d 字节\n", n);
+        usleep(500000);
+        n = read(fd, buf, sizeof(buf));   /* 接收 */
+        if (n &gt; 0) { buf[n] = 0; printf("收到 %d 字节: %s\n", n, buf); }
+    }
+    close(fd);
+    return 0;
+}</code></pre>
+<p>等价的 Python(<a href="#s6">第 6 节</a>还有更多):</p>
+<pre><code class="python">import os, termios
+
+fd = os.open("/dev/ttyAMA0", os.O_RDWR | os.O_NOCTTY | os.O_NONBLOCK)
+a = termios.tcgetattr(fd)
+a[4] = a[5] = termios.B115200            # 波特率
+a[3] &amp;= ~(termios.ECHO | termios.ICANON | termios.ISIG)   # raw
+termios.tcsetattr(fd, termios.TCSANOW, a)
+
+os.write(fd, b"hello\n")
+print("收到:", os.read(fd, 256))</code></pre>
+
+<!-- ===================== 4 飞控 ===================== -->
+<h2 id="s4">4. 连接飞控(MAVLink)</h2>
+
+<p>市面飞控(Pixhawk / ArduPilot / PX4 / Auterion 等)对外的标准协议是 <b>MAVLink</b>——
+一种二进制帧协议:每帧以 <code>0xFD</code>(v2)或 <code>0xFE</code>(v1)开头,内含系统号、消息号、数据与 CRC 校验。
+你不需要手写协议:《串口监控工具》的「飞控 MAVLink」页已经内置解析。</p>
+
+<h3>方式 A:USB 直连(你现在的方式,推荐调试期用)</h3>
+<div class="okbox">
+飞控 USB 口插到 Jetson → 自动出现 <code>/dev/ttyACM0</code> → 工具「飞控 MAVLink」页选它 → 115200 → 连接。
+USB 虚拟串口<b>不挑波特率</b>(设多少都行),免接线、免释放、带电源,是最安全的验证方式。
+</div>
+
+<h3>方式 B:40-pin UART 接线(装机用)</h3>
+
+<h4 class="step">① 针脚定义</h4>
+<p>Pixhawk 系飞控的 TELEM 口一般是 <b>6-pin JST-GH 座(Pixhawk 连接器标准 DS-009)</b>:
+脚1=5V(Vt)、脚2=TX、脚3=RX、脚4=CTS、脚5=RTS、脚6=GND。
+<b>不同飞控可能不同,接线前务必翻你的飞控手册或用万用表确认!</b></p>
+
+<table>
+<tr><th>Jetson 40-pin</th><th>↔</th><th>飞控 TELEM(JST-GH 6pin)</th><th>线色惯例</th><th>说明</th></tr>
+<tr><td>脚 8(UART1_TX)</td><td>→</td><td>脚 3(RX)</td><td>黄/橙</td><td><b>必须交叉!</b></td></tr>
+<tr><td>脚 10(UART1_RX)</td><td>←</td><td>脚 2(TX)</td><td>绿</td><td></td></tr>
+<tr><td>脚 6(GND)</td><td>—</td><td>脚 6(GND)</td><td>黑</td><td><b>不共地 = 乱码/烧口</b></td></tr>
+<tr><td>不接</td><td></td><td>脚 1(5V)</td><td>红</td><td>除非明确要 Jetson 给飞控供电(拉载请评估电流)</td></tr>
+<tr><td>不接</td><td></td><td>脚 4/5(CTS/RTS)</td><td>—</td><td>硬件流控,两端都没开流控就不接</td></tr>
+</table>
+
+<div class="warnbox">⚠️ <b>三条铁律:</b> ① TX 接 RX、RX 接 TX(直连 = 永远没数据);② GND 必须共地;
+③ Jetson 串口是 3.3V 电平,飞控 TELEM 也是 3.3V——<b>恰好匹配,但别接到飞控的 5V 电平口(如某些 GPS 口)</b>。</div>
+
+<h4 class="step">② 一般用法</h4>
+<ol>
+  <li><b>释放 40-pin 串口</b>(见第 3 节),重启。</li>
+  <li><b>飞控侧开 MAVLink</b>:找一个空闲 TELEM/UART 口配置为 MAVLink——
+      <ul>
+        <li>PX4:参数 <code>MAV_1_CONFIG</code> 指到该口(如 TELEM2),<code>SER_TEL2_BAUD</code>=57600 或 115200,<code>MAV_1_MODE</code>=Normal(外部电脑用 Onboard 亦可);</li>
+        <li>ArduPilot:<code>SERIAL2_PROTOCOL</code>=2(MAVLink2),<code>SERIAL2_BAUD</code>=57 或 115。</li>
+      </ul></li>
+  <li><b>Jetson 侧</b>:工具「飞控 MAVLink」页 → ttyAMA0 → 选<b>与飞控一致的波特率</b>(拿不准就点【自动嗅探波特率】)→ 连接。</li>
+  <li>看到心跳后即可切模式/解锁/上锁(解锁有双重确认),STATUSTEXT 窗口会滚动显示飞控日志。</li>
+</ol>
+
+<h4 class="step">③ 原文链接</h4>
+<ul>
+  <li>PX4 · 与配套电脑通信(MAVLink 串口配置,含 MAV_1_CONFIG 等参数说明):
+      <a href="https://docs.px4.io/main/en/companion_computer/pixhawk_companion.html" target="_blank">docs.px4.io · Companion Computer</a></li>
+  <li>PX4 · 参数参考(SER_TEL2_BAUD 等):
+      <a href="https://docs.px4.io/main/en/advanced_config/parameter_reference.html" target="_blank">docs.px4.io · Parameter Reference</a></li>
+  <li>ArduPilot · MAVLink 基础与 SERIALx 参数:
+      <a href="https://ardupilot.org/dev/docs/mavlink-basics.html" target="_blank">ardupilot.org · MAVLink Basics</a></li>
+  <li>Pixhawk 连接器标准 DS-009(TELEM 6-pin JST-GH 脚序权威定义):
+      <a href="https://github.com/pixhawk/Pixhawk-Standards/blob/master/DS-009%20Pixhawk%20Connector%20Standard.pdf" target="_blank">github.com/pixhawk/Pixhawk-Standards</a></li>
+  <li>MAVLink 协议规范(帧格式/CRC/消息定义):
+      <a href="https://mavlink.io/en/" target="_blank">mavlink.io</a></li>
+  <li>MAVLink 常用消息速查(HEARTBEAT/ATTITUDE/GLOBAL_POSITION_INT…):
+      <a href="https://mavlink.io/en/messages/common.html" target="_blank">mavlink.io · common.xml</a></li>
+</ul>
+
+<h4 class="step">④ 示例</h4>
+<p>用工具连接后,MAVLink 页各卡片含义:</p>
+<table>
+<tr><th>卡片</th><th>数据来源(MAVLink 消息)</th><th>含义</th></tr>
+<tr><td>飞行状态</td><td>HEARTBEAT</td><td>飞行模式、解锁(armed)/上锁、系统状态、心跳频率(断了会停更)</td></tr>
+<tr><td>电池</td><td>SYS_STATUS</td><td>总电压(V)/电流(A)/剩余电量(%)</td></tr>
+<tr><td>姿态</td><td>ATTITUDE / ATTITUDE_QUATERNION</td><td>横滚 roll / 俯仰 pitch / 航向 yaw(度)</td></tr>
+<tr><td>高度/速度</td><td>GLOBAL_POSITION_INT + VFR_HUD</td><td>相对起飞点高度、海拔、爬升率、地速、油门</td></tr>
+<tr><td>GPS</td><td>GPS_RAW_INT</td><td>定位等级(3D/RTK)、卫星数、经纬度</td></tr>
+<tr><td>STATUSTEXT</td><td>STATUSTEXT</td><td>飞控自己的日志(报错/告警会红黄色滚动)</td></tr>
+</table>
+<p>不借助工具、手工验证链路(MAVLink v2 帧头识别):</p>
+<pre><code>stty -F /dev/ttyAMA0 57600 raw -echo
+xxd /dev/ttyAMA0 | head
+# 每行看到大量  fd 01 00 00 xx xx ... 开头 = MAVLink v2 帧(0xFD=帧头)
+#                          ↑ 长度 ↑兼容标志 ↑序号 ↑sysid ↑compid ↑msgid(3字节)
+# 若开头是 fe = MAVLink v1。完全看不到 fd/fe 开头的规律 = 波特率不对或没共地</code></pre>
+
+<!-- ===================== 5 其他口 ===================== -->
+<h2 id="s5">5. 其他串口专题</h2>
+
+<h3>5.1 /dev/ttyTCU0 —— 调试串口(Tegra Combined UART)</h3>
+<table>
+<tr><th>要点</th><th>内容</th></tr>
+<tr><td>① 定义</td><td>SoC 内部调试口,固定 115200 8N1,永远输出内核/启动日志(<code>console=ttyTCU0</code>),板上没有外露排针</td></tr>
+<tr><td>② 用法</td><td>一般<b>不要动</b>。想看启动日志:接 USB 转串口线到载板调试点,或 <code>sudo cat /dev/ttyTCU0</code>;改造引导/排查不开机时它就是生命线</td></tr>
+<tr><td>③ 原文链接</td><td><a href="https://www.forecr.io/blogs/bsp-development/jetson-orin-nx-serial-console" target="_blank">Forecr · Jetson Orin NX Serial Console 说明</a>;
+<a href="https://docs.nvidia.com/jetson/archives/r35.6.1/DeveloperGuide/text/HR/ControllerAndPeripherals/Uart.html" target="_blank">NVIDIA UART 指南</a></td></tr>
+<tr><td>④ 示例</td><td><code>sudo cat /dev/ttyTCU0</code> → 能看到实时内核日志;插上 USB 线连 PC 时,PC 端打开 115200 终端即可看到完整启动过程</td></tr>
+</table>
+
+<h3>5.2 /dev/ttyTHS0 / ttyTHS3 / ttyTHS4 —— Tegra 板载高速 UART</h3>
+<table>
+<tr><th>要点</th><th>内容</th></tr>
+<tr><td>① 定义</td><td>Tegra SoC 的硬件 UART(UARTA/C/D),3.3V 电平。但本载板上:<b>ttyTHS0 走 M.2 Key E 槽</b>(1.8V,给 WiFi/BT 模组)、<b>ttyTHS3/4 未布线到任何外露接口</b></td></tr>
+<tr><td>② 用法</td><td>没有排针可接,主要价值:① 自环/协议学习(两个口互接?——不行,只有软件层可见);② 配合 USB 转串口模块飞线测试点(高级);③ 在虚拟终端/pty 上做开发调试</td></tr>
+<tr><td>③ 原文链接</td><td><a href="https://docs.nvidia.com/jetson/archives/r35.6.1/DeveloperGuide/text/HR/ControllerAndPeripherals/Uart.html" target="_blank">NVIDIA UART 指南</a>;
+<a href="https://developer.nvidia.com/downloads/assets/embedded/secure/jetson/orin_nano/docs/jetson_orin_nano_devkit_carrier_board_specification_sp.pdf" target="_blank">载板规格书(M.2 Key E 节)</a></td></tr>
+<tr><td>④ 示例</td><td><code>stty -F /dev/ttyTHS0 115200 raw -echo &amp;&amp; timeout 2 cat /dev/ttyTHS0 | xxd</code> —— 能正常打开、无数据,说明设备树配置正常(载板没接东西,属预期)</td></tr>
+</table>
+
+<h3>5.3 /dev/ttyACM* 与 /dev/ttyUSB* —— USB 虚拟串口</h3>
+<table>
+<tr><th>要点</th><th>内容</th></tr>
+<tr><td>① 定义</td><td>USB 设备虚拟出来的串口:ttyACM*=USB CDC-ACM 类设备(你的 PX4 飞控、Arduino 等);ttyUSB*=FT232/CP210x/CH340 等 USB 转串口芯片</td></tr>
+<tr><td>② 用法</td><td>即插即用,dialout 组免 sudo;热插拔后编号可能变化,用 <code>ls -l /dev/serial/by-id/</code> 拿唯一路径写死到程序里</td></tr>
+<tr><td>③ 原文链接</td><td><a href="https://www.kernel.org/doc/Documentation/usb/usb-serial.txt" target="_blank">kernel.org · usb-serial 文档</a></td></tr>
+<tr><td>④ 示例</td><td><code>ls -l /dev/serial/by-id/</code> → 你会看到 <code>usb-Auterion_PX4_FMU_v6C.x_…-if00 → ../../ttyACM0</code>,
+在 MAVLink 页/你的程序里用这个 by-id 路径就不会认错设备</td></tr>
+</table>
+
+<!-- ===================== 6 示例汇总 ===================== -->
+<h2 id="s6">6. 代码示例汇总</h2>
+
+<h3>6.1 stty 命令行(最快验证)</h3>
+<pre><code># 配置并读 HEX(115200 8N1 最常见)
+stty -F /dev/ttyAMA0 115200 cs8 -cstopb -parenb -echo raw
+xxd /dev/ttyAMA0
+
+# 发送
+echo -n "AT\r\n" > /dev/ttyAMA0
+
+# 查看当前配置
+stty -F /dev/ttyAMA0 -a
+
+# 列出 Linux 支持的波特率上限
+stty -F /dev/ttyAMA0 4000000 &amp;&amp; stty -F /dev/ttyAMA0 | head -1   # PL011 支持 4Mbps</code></pre>
+
+<h3>6.2 C 语言(termios 原生)</h3>
+<p>见 <a href="#s3">第 3 节④</a> 的完整可编译示例(<code>gcc uart_demo.c -o uart_demo &amp;&amp; ./uart_demo</code>)。
+关键点回顾:<code>O_RDWR|O_NOCTTY|O_NONBLOCK</code> 打开 → <code>cfmakeraw</code> → <code>cfsetispeed/cfsetospeed</code> → <code>tcsetattr</code> → read/write。</p>
+
+<h3>6.3 Python(termios,零依赖)</h3>
+<pre><code class="python">#!/usr/bin/env python3
+"""串口透传: 把 ttyAMA0 收到的数据打印成 HEX+ASCII, 5 秒后退出"""
+import os, termios, time, select
+
+DEV = "/dev/ttyAMA0"
+fd = os.open(DEV, os.O_RDWR | os.O_NOCTTY | os.O_NONBLOCK)
+a = termios.tcgetattr(fd)
+a[0] = a[1] = 0                                  # iflag/oflag 清零
+a[3] &amp;= ~(termios.ECHO | termios.ICANON | termios.ISIG | termios.IEXTEN)
+a[4] = a[5] = termios.B57600                     # ← 波特率
+termios.tcsetattr(fd, termios.TCSANOW, a)
+
+t0 = time.time()
+while time.time() - t0 &lt; 5:
+    r, _, _ = select.select([fd], [], [], 0.2)
+    if r:
+        data = os.read(fd, 4096)
+        print(time.strftime("%H:%M:%S"),
+              "HEX:", data.hex(" ").upper(),
+              "| ASCII:", "".join(chr(b) if 32 &lt;= b &lt; 127 else "." for b in data))
+os.close(fd)</code></pre>
+
+<h3>6.4 手工解析 MAVLink 帧(理解协议用)</h3>
+<pre><code class="python">#!/usr/bin/env python3
+"""MAVLink v2 帧结构速查:
+   FD | LEN | INC | CMP | SEQ | SYS | CMP | MSGID(3B) | PAYLOAD(LEN) | CRC(2B) [,签名13B]
+   CRC 为 CRC-16/X.25, 校验范围 = LEN..MSGID + PAYLOAD + 每消息的 CRC_EXTRA 字节"""
+def crc_x25(data, crc=0xFFFF):
+    for b in data:
+        crc ^= b
+        for _ in range(8):
+            crc = (crc &gt;&gt; 1) ^ 0x8408 if crc &amp; 1 else crc &gt;&gt; 1
+    return crc ^ 0xFFFF
+
+# 例: HEARTBEAT(消息号0) 的 CRC_EXTRA = 50
+# 完整实现见本目录 mavlink_min.py(纯标准库, 已通过 10 项自测)</code></pre>
+
+<div class="tipbox">🛠 <b>其实不用手写</b>:《串口监控工具》的 mavlink_min.py 已实现完整解析/构造,
+「飞控 MAVLink」页就是它的 GUI。想在自己程序里用:
+<code>sys.path.append("/home/jsz/AAAFIXsystem/6-串口监控-linux-arm64-JetsonOrinNX")
+import mavlink_min as mav</code></div>
+
+<!-- ===================== 7 排查 ===================== -->
+<h2 id="s7">7. 故障排查速查表</h2>
+
+<table>
+<tr><th>症状</th><th>最可能原因(按概率排序)</th><th>解决</th></tr>
+<tr><td>完全收不到数据</td><td>① TX/RX 没交叉 ② 没共地 ③ 波特率不一致 ④ 40-pin 没释放(日志/login 混入+权限) ⑤ 飞控口没配 MAVLink</td><td>回环测试(第3节)→ 查共地 → 【自动嗅探波特率】→ 释放40-pin → 查飞控参数</td></tr>
+<tr><td>有数据但全是乱码</td><td>① 波特率差(115200↔57600 最常见) ② 校验位/停止位不对 ③ 共地不良/地环路 ④ 线太长无屏蔽</td><td>【自动嗅探波特率】;终端页换校验/停止位;缩短线或换屏蔽线</td></tr>
+<tr><td>数据时断时续</td><td>① 杜邦线接触不良 ② 地线松动 ③ 飞控在发送大数据流时电压跌落</td><td>换粗线/焊接;分别供电时测两端 5V/3.3V 是否稳定</td></tr>
+<tr><td>总览页显示"无权限"</td><td>ttyAMA0/ttyTCU0 是 root:tty(未释放)</td><td>工具【释放40-pin串口】;ttyTCU0 保持 root 保护不动</td></tr>
+<tr><td>预览/终端打开 ttyAMA0 报忙</td><td>serial-getty@ttyAMA0 还开着</td><td>【释放40-pin串口】并重启</td></tr>
+<tr><td>MAVLink 页连接后一直"等待心跳"</td><td>① 口选错(ttyAMA0 vs ttyACM0) ② 波特率不对 ③ 飞控 MAVLink 流没开 ④ 帧被 console 日志污染(没释放)</td><td>按 ①→④ 逐项排除;工具底部"坏帧/未知"计数会暗示数据在流但解不出来</td></tr>
+<tr><td>USB 拔插后 ttyACM0 变成 ttyACM1</td><td>枚举顺序变化</td><td>改用 <code>/dev/serial/by-id/…</code> 唯一路径(见 5.3④)</td></tr>
+<tr><td>释放了还是没有 ttyAMA0</td><td>extlinux.conf 语法被外改坏</td><td>【恢复40-pin为系统默认】;仍不行用备份 <code>extlinux.conf.aaafix-40pin.bak</code> 手工恢复</td></tr>
+<tr><td>解锁指令被拒绝</td><td>飞控侧安全检查(ESC 校准/罗盘/GPS/模式互锁)</td><td>看 STATUSTEXT 窗口——飞控会告诉你拒绝原因(红色 ERROR 行)</td></tr>
+</table>
+
+<footer>
+<p><b>数据来源与核验声明</b>(2026-11-08,本机实测):</p>
+<ul>
+  <li>40-pin 引脚定义:NVIDIA《Jetson Orin Nano Developer Kit Carrier Board Specification》SP-11324-001_v1.3
+      Table 3-3 × NVIDIA Jetson.GPIO 2.1.9 <code>JETSON_ORIN_NX_PIN_DEFS</code> <b>双源一致</b>。</li>
+  <li>串口设备映射:<code>/proc/cmdline</code>(console=ttyAMA0)、<code>/sys/class/tty/console/active</code>、
+      <code>/proc/device-tree/aliases</code>、<code>/var/log/kern.log</code> 本机实测。</li>
+  <li>串口设备清单、权限、占用状态:<code>/dev</code> + <code>/sys/class/tty</code> 实时扫描(《串口监控工具》同源逻辑)。</li>
+  <li>PX4/ArduPilot 参数与 Pixhawk 连接器标准:见各节"原文链接"官方文档。</li>
+</ul>
+<p>AAAFIXsystem · 6-串口监控-linux-arm64-JetsonOrinNX · 配套工具:《串口监控工具》</p>
+</footer>
+
+</div>
+</body>
+</html>
