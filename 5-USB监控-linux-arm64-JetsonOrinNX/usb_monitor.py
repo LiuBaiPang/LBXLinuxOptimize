@@ -135,8 +135,9 @@ def scan_usb():
             devs[par]["children"].append(n)
 
     for n, d in devs.items():
-        # 接口与其驱动
-        for ifdir in sorted(glob.glob(os.path.join(d["path"], ":*"))):
+        # 接口与其驱动(接口子目录名是完整名,如 "1-2.1:1.0")
+        for ifdir in sorted(glob.glob(os.path.join(d["path"],
+                                                   d["name"] + ":*"))):
             ifname = os.path.basename(ifdir)
             drv = os.path.basename(os.path.realpath(
                 os.path.join(ifdir, "driver")))
@@ -146,17 +147,15 @@ def scan_usb():
                 "cls": IFACE_CLASS.get(cls, cls or "?"),
             })
         # 大容量存储对应的块设备
-        d["block"] = usb_block_dev(d["path"])
+        d["block"] = usb_block_dev(d["path"], d["name"])
 
     return devs
 
 
-def usb_block_dev(path):
+def usb_block_dev(path, name):
     """USB 大容量存储 -> 块设备名(如 sda),无则空串。"""
-    for ip in sorted(glob.glob(os.path.join(path, ":*"))):
-        for b in (glob.glob(os.path.join(ip, "host*", "target*", "*", "block", "*")) +
-                  glob.glob(os.path.join(ip, "host*", "target*", "*", "block", "*",
-                                         "*", "block", "*"))):
+    for ip in sorted(glob.glob(os.path.join(path, name + ":[0-9]*"))):
+        for b in glob.glob(os.path.join(ip, "host*", "target*", "*", "block", "*")):
             return os.path.basename(b)
     return ""
 
