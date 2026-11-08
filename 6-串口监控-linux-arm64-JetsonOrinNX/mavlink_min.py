@@ -32,13 +32,16 @@ MSG_DEFS = {
             ("custom_mode", "u32"), ("type", "u8"), ("autopilot", "u8"),
             ("base_mode", "u8"), ("system_status", "u8"), ("mavlink_version", "u8")]),
     1:   ("SYS_STATUS", 124, [
-            ("onboard_control_sensors_present", "u16"), ("onboard_control_sensors_enabled", "u16"),
-            ("onboard_control_sensors_health", "u16"), ("load", "u16"),
-            ("voltage_battery", "u16"), ("current_battery", "i16"),
+            # 新版 XML: 传感器位图已是 u32; battery_remaining 紧跟 current_battery
+            ("onboard_control_sensors_present", "u32"),
+            ("onboard_control_sensors_enabled", "u32"),
+            ("onboard_control_sensors_health", "u32"),
+            ("load", "u16"), ("voltage_battery", "u16"), ("current_battery", "i16"),
+            ("battery_remaining", "i8"),
+            # --- v2 扩展 ---
             ("drop_rate_comm", "u8"), ("errors_comm", "u8"),
             ("errors_count1", "u8"), ("errors_count2", "u8"),
-            ("errors_count3", "u8"), ("errors_count4", "u8"),
-            ("battery_remaining", "i8")]),
+            ("errors_count3", "u8"), ("errors_count4", "u8")]),
     2:   ("SYSTEM_TIME", 137, [("time_unix_usec", "u64"), ("time_boot_ms", "u32")]),
     4:   ("PING", 237, [
             ("time_usec", "u64"), ("seq", "u32"),
