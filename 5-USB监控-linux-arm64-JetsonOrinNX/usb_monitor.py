@@ -1052,8 +1052,8 @@ class App(tk.Tk):
         if items and not self.cmb_cam.get():
             self.cmb_cam.current(0)
         self.cam_canvas.itemconfigure(
-            "camhint", text="共 %d 个 video 节点(同一摄像头会占多个节点)。"
-                            "RealSense 彩色流一般在第一个节点,读不出画面就换下一个。"
+            "camhint", text="共 %d 个 video 节点:同一摄像头的彩色/深度/红外各占一个节点,"
+                            "想看彩色画面就切换节点试(深度/红外是灰度点阵图,属正常)。"
                             % len(items) if items else "未发现摄像头设备")
 
     def _cam_toggle(self):
