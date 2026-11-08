@@ -291,7 +291,7 @@ def read_power():
     # 兜底: jetson-stats 的 root 守护服务(jsz 在 jtop 组,免 root 可用)
     try:
         from jtop import jtop  # noqa
-        with jtop(no_data_guard=False) as jt:
+        with jtop() as jt:
             raw = jt.power
         rails = _jtop_rails(raw)
         if not rails:
