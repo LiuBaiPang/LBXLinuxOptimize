@@ -802,7 +802,7 @@ class App(tk.Tk):
         if over_budget(d) or is_degraded(d) or d["authorized"] == "0":
             badge = "  ⚠"
         if d["runtime"] == "suspended":
-            badge += " 💤"
+            badge += " Zz"
         return txt + badge
 
     def _dev_tag(self, d):
@@ -933,7 +933,7 @@ class App(tk.Tk):
             text=mt, fg=C_BAD if over_budget(d) else C_FG)
         rt = d["runtime"] or "?"
         self._dv["runtime"].configure(
-            text=rt + ("   💤已自动挂起" if rt == "suspended" else ""),
+            text=rt + ("   Zz已自动挂起" if rt == "suspended" else ""),
             fg=C_SUB if rt == "suspended" else C_OK)
         self._dv["control"].configure(
             text="%s (%s)" % (d["control"] or "?",
