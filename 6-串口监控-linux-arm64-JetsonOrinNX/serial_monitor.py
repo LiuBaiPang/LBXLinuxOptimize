@@ -1102,20 +1102,23 @@ class App(tk.Tk):
         self.mfd = None
         self.mparser = mav.Parser()
         self.mdev = None
-        self.m_sysid = 1          # 目标(飞控)
+        self.m_sysid = 1          # 目标(飞控)的 sysid/compid, 收到心跳后自动更新
         self.m_compid = 1
         self.m_autopilot = None
         self.m_type = None
         self.m_mode = None
         self.m_armed = None
+        self.m_sysstate = None
         self.m_seq = 0
         self.m_rx = self.m_tx = 0
         self.m_hb_ts = []         # 心跳时间戳 → 频率
-        self.m_rates = {}         # name -> [deque(ts), 计数]
-        self.m_got_hb = False
+        self.m_rates = {}         # name -> [deque(时间戳), 累计帧数]
+        self.m_batt_v = self.m_batt_i = self.m_batt_r = None
+        self.m_att = self.m_pos = self.m_gps = self.m_hud = self.m_rc = None
         self.m_req_sent = False
         self.m_ping_t0 = {}
         self.m_rtt = None
+        self._mav_rate_ts = 0
 
     def _mav_connect(self):
         dev = self.cmb_mport.get()
