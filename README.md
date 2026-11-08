@@ -5,6 +5,7 @@ Jetson Orin NX (L4T R35.6.4) 系统修复工具集。
 - `1-显示修复-linux-arm64-JetsonOrinNX/` — HDMI 黑屏修复(根因: ConnectedMonitor DFP)
 - `2-网络修复-linux-arm64-JetsonOrinNX/` — 断网修复(WiFi 省电 + DNS 双服务)
 - `3-快捷截图-linux-arm64-JetsonOrinNX/` — 截图工具
+- `4-右键复制路径-linux-arm64-JetsonOrinNX/` — Nautilus 右键"复制完整路径"(支持一级菜单/脚本子菜单两档)
 - `LinuxRepair/` 与打包 zip — 通用修复部署包
 
 ## 项目命名规范(新项目必须遵守)
