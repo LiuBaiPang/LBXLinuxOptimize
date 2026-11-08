@@ -14,11 +14,9 @@ set -u
 export AAAFIX_PATHS="${NAUTILUS_SCRIPT_SELECTED_FILE_PATHS:-}"
 export AAAFIX_URIS="${NAUTILUS_SCRIPT_SELECTED_URIS:-}"
 
-python3 - <<'PY' 2>/dev/null || {
-  notify-send -u critical -i dialog-error "复制路径失败" \
-    "剪贴板复制失败(缺 python3-gi?)" 2>/dev/null
-  exit 0
-}
+# 注意: heredoc 后面不能再跟 "|| { ... }" —— bash 会把花括号组吞进 heredoc,
+# 报"未预期的文件结尾"。所以这里先跑完再用退出码判断。
+python3 - <<'PY' 2>/dev/null
 import os, sys, time, gi
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, Gdk, GLib
@@ -55,5 +53,12 @@ if os.fork() > 0:
 os.setsid()
 loop.run()
 PY
+RC=$?
+
+# 2 = 没有选中项(静默); 其它非0 = python3-gi 缺失等, 弹错误通知
+if [ "$RC" -ne 0 ] && [ "$RC" -ne 2 ]; then
+  notify-send -u critical -i dialog-error "复制路径失败" \
+    "剪贴板复制失败(缺 python3-gi?)" 2>/dev/null
+fi
 
 exit 0
