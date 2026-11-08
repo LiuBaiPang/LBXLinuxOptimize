@@ -246,7 +246,9 @@ BAUDS = _baud_list()
 
 def open_serial(dev, baud, bytesize=8, parity="N", stopbits=1,
                 xonxoff=False, rtscts=False, flush=False):
-    """按参数打开并配置串口(原生 termios, 非阻塞)。返回 fd。"""
+    """按参数打开并配置串口(原生 termios, 非阻塞)。返回 fd。
+    打开时拉起 DTR/RTS(与 pyserial 行为一致)——某些 USB 设备(飞控等)
+    会等主机这两个信号才开始发数据。"""
     fd = os.open(dev, os.O_RDWR | os.O_NOCTTY | os.O_NONBLOCK)
     try:
         a = termios.tcgetattr(fd)
@@ -286,6 +288,11 @@ def open_serial(dev, baud, bytesize=8, parity="N", stopbits=1,
         termios.tcsetattr(fd, termios.TCSANOW, a)
         if flush:
             termios.tcflush(fd, termios.TCIOFLUSH)
+        # 拉起 DTR/RTS(个别设备/虚拟口不支持, 失败忽略)
+        try:
+            fcntl.ioctl(fd, 0x5418, array.array('i', [0x0002 | 0x0004]), True)
+        except OSError:
+            pass
     except Exception:
         os.close(fd)
         raise
