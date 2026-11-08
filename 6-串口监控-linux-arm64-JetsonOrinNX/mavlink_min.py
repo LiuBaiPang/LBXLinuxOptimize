@@ -263,7 +263,7 @@ class Parser(object):
             if "[" in t:
                 base, n = t[:-1].split("[")
                 n = int(n)
-                sz = struct.calcsize("<" + _SCALAR[base])
+                sz = struct.calcsize("<" + _SCALAR[base]) if base in _SCALAR else 1
                 chunk = payload[off:off + n * sz]
                 off += n * sz
                 if base == "char":
