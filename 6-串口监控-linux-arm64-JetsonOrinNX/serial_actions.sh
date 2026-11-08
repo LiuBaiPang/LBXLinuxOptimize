@@ -94,11 +94,43 @@ restore-40pin() {
     echo "完成: 重启后恢复系统默认(40-pin 8/10 脚 = 内核控制台 + 登录终端)"
 }
 
+# 4) 飞控固定别名: /dev/px4fc —— 幂等
+#    作用: 飞控无论插哪个 USB 口、枚举成 ttyACM0/1/2..., 都固定出现 /dev/px4fc,
+#    程序里写死 /dev/px4fc 就不怕重新插拔后编号漂移。
+#    匹配规则: USB VID=3185(Auterion/PX4 FMU, 含 Holybro Pixhawk 6C 刷 PX4 固件)。
+#    换了别的飞控时把 idVendor 改成新设备即可(udevadm info 看 ID_VENDOR_ID)。
+fc-alias() {
+    cat > "$FC_RULE" <<'EOF'
+# AAAFIXsystem: 飞控(USB CDC 串口)固定别名 /dev/px4fc
+# VID 3185 = Auterion/PX4 FMU(用户设备: Holybro Pixhawk 6C 刷 PX4 固件)
+SUBSYSTEM=="tty", ATTRS{idVendor}=="3185", SYMLINK+="px4fc"
+EOF
+    udevadm control --reload-rules 2>/dev/null
+    # 让当前已插的飞控立即重走 udev 生成别名(不用重新插拔)
+    udevadm trigger --subsystem-match=tty 2>/dev/null
+    sleep 0.3
+    if [ -e /dev/px4fc ]; then
+        echo "OK: /dev/px4fc 已生效 → $(readlink -f /dev/px4fc)"
+    else
+        echo "OK: 别名规则已写入($FC_RULE), 飞控未在位时先不生成, 插上即出现"
+    fi
+}
+
+fc-alias-remove() {
+    rm -f "$FC_RULE"
+    udevadm control --reload-rules 2>/dev/null
+    udevadm trigger --subsystem-match=tty 2>/dev/null
+    rm -f /dev/px4fc 2>/dev/null
+    echo "OK: 已移除飞控别名规则与 /dev/px4fc"
+}
+
 # ---------- 分发 ----------
 case "${1:-}" in
-    status)        status ;;
-    free-40pin)    free-40pin ;;
-    restore-40pin) restore-40pin ;;
-    *)  echo "用法: serial_actions.sh <status|free-40pin|restore-40pin>"
+    status)          status ;;
+    free-40pin)      free-40pin ;;
+    restore-40pin)   restore-40pin ;;
+    fc-alias)        fc-alias ;;
+    fc-alias-remove) fc-alias-remove ;;
+    *)  echo "用法: serial_actions.sh <status|free-40pin|restore-40pin|fc-alias|fc-alias-remove>"
         exit 2 ;;
 esac
