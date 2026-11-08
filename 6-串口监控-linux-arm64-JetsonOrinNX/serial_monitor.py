@@ -37,7 +37,8 @@ import fcntl
 import termios
 from collections import deque
 import tkinter as tk
-from tkinter import ttk, scrolledtext, messagebox, filedialog, simpledialog, webbrowser
+import webbrowser
+from tkinter import ttk, scrolledtext, messagebox, filedialog, simpledialog
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ACTION = os.path.join(HERE, "serial_actions.sh")
@@ -1734,9 +1735,7 @@ def main():
     if os.geteuid() == 0:
         print("请不要用 root 运行本工具(需要时会主动要密码)。")
         return 1
-    App._io_stat = {}                 # 类属性占位 → 实例级重置
     app = App()
-    app._io_stat = {}
     app.mainloop()
     return 0
 
