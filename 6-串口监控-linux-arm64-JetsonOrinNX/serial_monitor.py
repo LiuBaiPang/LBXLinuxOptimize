@@ -25,6 +25,7 @@ import glob
 import json
 import os
 import re
+import math
 import subprocess
 import sys
 import threading
@@ -34,6 +35,7 @@ import errno
 import select
 import fcntl
 import termios
+from collections import deque
 import tkinter as tk
 from tkinter import ttk, scrolledtext, messagebox, filedialog, simpledialog, webbrowser
 
@@ -303,11 +305,10 @@ def from_hex(s):
 
 
 def printable(data):
-    """bytes -> 可读 ASCII(不可见字符显示为 ·, 保留换行制表)。"""
+    """bytes -> 可读 ASCII(不可见字符显示为 ·, 保留换行/制表)。"""
     out = []
     for b in data:
-        c = chr(b)
-        out.append(c if (c.isprintable() or c in "\r\n\t") else "·")
+        out.append(chr(b) if (32 <= b < 127 or b in (9, 10, 13)) else "·")
     return "".join(out)
 
 
@@ -438,6 +439,7 @@ class App(tk.Tk):
         self.q = queue.Queue()
         self._pw = None                    # sudo 密码缓存(仅内存)
         self._last_irq = {}
+        self._io_stat = {}                 # dev -> {rx, tx}(本工具实测收发计数)
         self._open_fds = {}                # dev -> 用途名(本工具占用的口)
         self.previews = {}                 # dev -> PreviewWindow
 
