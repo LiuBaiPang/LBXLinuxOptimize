@@ -566,20 +566,19 @@ def _selftest():
     check(len(got) == 1 and got[0].fields["text"] == "Hello 世界 from PX4",
           "STATUSTEXT 中文 + 分片粘包")
 
-    # 5. v2 截断 payload(GPS_RAW_INT 只发 v1 部分, 扩展字段缺省)
+    # 5. v2 截断 payload(GPS_RAW_INT 只发前 16 字节: time+lat+lon, 后面全按 0)
     ce = MSG_DEFS[24][1]
     full = bytearray(msg_size(24))
     struct.pack_into("<Q", full, 0, 123456789)
-    full[8] = 3                              # fix_type
-    struct.pack_into("<i", full, 9, 31000000)
-    struct.pack_into("<i", full, 13, 121000000)
-    hdr = bytes([10, 0, 0, 7, 1, 1, 24, 0, 0])
-    crc = frame_crc(hdr, bytes(full[:10]), ce)
-    raw = bytes([0xFD]) + hdr + bytes(full[:10]) + bytes([crc & 0xFF, crc >> 8])
+    struct.pack_into("<i", full, 8, 31000000)     # lat
+    struct.pack_into("<i", full, 12, 121000000)   # lon
+    hdr = bytes([16, 0, 0, 7, 1, 1, 24, 0, 0])
+    crc = frame_crc(hdr, bytes(full[:16]), ce)
+    raw = bytes([0xFD]) + hdr + bytes(full[:16]) + bytes([crc & 0xFF, crc >> 8])
     f = Parser().feed(raw)[0]
-    check(f.name == "GPS_RAW_INT" and f.fields["fix_type"] == 3
-          and f.fields["satellites_visible"] == 0,
-          "v2 截断 payload 解析(扩展字段缺省为 0)")
+    check(f.name == "GPS_RAW_INT" and f.fields["lat"] == 31000000
+          and f.fields["lon"] == 121000000 and f.fields["fix_type"] == 0,
+          "v2 截断 payload 解析(缺失字段补 0)")
 
     # 6. 杂散字节 + 两个连续帧 + PX4 模式(PX4: MANUAL = main_mode 1)
     p = Parser()
