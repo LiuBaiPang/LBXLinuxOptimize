@@ -512,6 +512,72 @@ xxd /dev/ttyAMA0 | head
 #                          ↑ 长度 ↑兼容标志 ↑序号 ↑sysid ↑compid ↑msgid(3字节)
 # 若开头是 fe = MAVLink v1。完全看不到 fd/fe 开头的规律 = 波特率不对或没共地</code></pre>
 
+<h3>4.5 实机案例:Holybro Pixhawk 6C + Pixhawk Jetson Baseboard(2026-11-08 确认的硬件)</h3>
+
+<div class="tipbox">
+用户实际机架:<b>飞控 = Holybro Pixhawk 6C</b>(TELEM1/2/3 = 6-pin JST-GH),
+<b>Jetson 载板 = Holybro Pixhawk Jetson Baseboard</b>(边缘一排连接器 UART1/UART0/GPIO/SPI/I2C/CAN + SD 槽)。
+</div>
+
+<p><b>先说清楚两个"不能":</b></p>
+<ul>
+  <li>载板上那个飞控插座(Pixhawk Bus / PAB,100-pin Hirose)是给 <b>Pixhawk 5X/6X</b> 用的,
+      <b>Pixhawk 6C 插不上去</b>(6C 是独立完整飞控,没有 PAB 高密度接口)。</li>
+  <li>载板内部的以太网交换机(RTL8367S,Jetson↔FC 千兆网)只有 6X 这类带网口的飞控能用,6C 没有。</li>
+</ul>
+<p>所以 6C 和 Jetson 的连接只有三条路:</p>
+
+<table>
+<tr><th>方式</th><th>怎么接</th><th>适用</th></tr>
+<tr><td><b>① USB 直连</b>(现在用的)</td><td>6C 的 USB-C 口 → Jetson USB 口,即 <code>/dev/ttyACM0</code>,免 sudo 免配置</td><td>台架调试/开发,最推荐起步</td></tr>
+<tr><td><b>② 载板边缘 UART1 → 6C TELEM2</b></td><td>6-pin JST-GH 线,从载板边缘印着 <b>UART1</b> 的连接器(它与飞控 TELEM2 在板内同一路 UART,即 40-pin 排针 8/10 脚信号 = <code>/dev/ttyAMA0</code>)接到 6C 的 <b>TELEM2</b></td><td>装机后长期使用</td></tr>
+<tr><td>③ 40-pin 排针直连(如果之后换了带排针的载板)</td><td>脚8→RX、脚10→TX、脚6→GND,见第 4 节</td><td>通用</td></tr>
+</table>
+
+<p><b>方式② 的接线表</b>(6C TELEM2 引脚 = Pixhawk 标准 DS-009:1=5V(Vt)、2=TX、3=RX、4=CTS、5=RTS、6=GND):</p>
+<table>
+<tr><th>载板边缘 UART1(Jetson 侧)</th><th>↔</th><th>Pixhawk 6C TELEM2</th><th>说明</th></tr>
+<tr><td>TX</td><td>→</td><td><b>脚3 RX</b></td><td>必须交叉!Jetson 的发送接飞控的接收</td></tr>
+<tr><td>RX</td><td>←</td><td><b>脚2 TX</b></td><td></td></tr>
+<tr><td>GND</td><td>—</td><td><b>脚6 GND</b></td><td>必须共地</td></tr>
+<tr><td>VCC/5V</td><td>✗ 不接</td><td>脚1 5V</td><td>两边各自供电,<b>不要把两条 5V 母线接通</b></td></tr>
+<tr><td>CTS/RTS(若有)</td><td>不接</td><td>脚4/5</td><td>两端都没开硬件流控</td></tr>
+</table>
+
+<div class="warnbox">
+⚠ <b>UART1 连接器的 pin 顺序 Holybro 文档未完整标注</b>(已查官方 Ports Pinout 页)。
+接错最多是无数据(3.3V 对 3.3V 不会烧),但请按下面 3 分钟"万用表认脚法"确认后再插:
+</div>
+<ol>
+  <li><b>认 GND</b>:载板断电,万用表通断档,逐一量 UART1 各针对载板固定孔/USB 外壳——0Ω 导通的就是 GND。</li>
+  <li><b>认 TX</b>:载板上电,工具「串口终端」打开 ttyAMA0(先释放),万用表直流档黑表笔接 GND、红表笔逐 pin——
+      <b>稳定 ≈3.3V 的就是 Jetson 的 TX</b>(串口空闲态为高电平)。</li>
+  <li><b>认 RX</b>:剩下信号脚中电压 0V/浮动的是 RX;若有 ≈5V 的脚是 VCC(<b>不接</b>)。</li>
+  <li>TX→TELEM2脚3、RX→TELEM2脚2、GND→脚6。接好先用「串口终端」看有没有 0xFD/0xFE 开头的十六进制流(见第 4 节④),再上 MAVLink 页。</li>
+</ol>
+
+<p><b>两侧软件配置:</b></p>
+<table>
+<tr><th>侧</th><th>配置</th></tr>
+<tr><td>Jetson(本工具)</td><td>①资料页【释放40-pin串口】→重启(边缘 UART1 与 40-pin 8/10 是同一路,出厂被控制台占用);②MAVLink 页选 <code>ttyAMA0</code>,波特率与飞控一致(拿不准点【自动嗅探波特率】)</td></tr>
+<tr><td>Pixhawk 6C(PX4)</td><td>TELEM2 出厂即配好 MAVLink(PX4 官方文档原文:"The Pixhawk TELEM2 interface is configured to use MAVLink by default")。QGC 里核对:<code>MAV_1_CONFIG=Telem2</code>、<code>SER_TEL2_BAUD=57600</code>(或 115200,两边一致即可)、<code>MAV_1_MODE=Onboard</code>(配套电脑推荐)</td></tr>
+</table>
+<p class="small">注:PX4/Holybro 文档里把这个内部串口写作"Jetson THS1 / <code>/dev/ttyTHS1</code>",那是 Xavier NX/新 BSP 的叫法;
+在 Orin NX + JetPack 5(本机 R35.6.4)上,同一路物理 UART 就是 <code>/dev/ttyAMA0</code>(本机已实测,见第 2 节)。
+另外你的飞控 USB 枚举名是"Auterion PX4 FMU v6C",与 Holybro Pixhawk 6C 是同一块 FMU(v6C),固件为 PX4 系。</p>
+
+<h3>④ 原文链接(本节新增)</h3>
+<ul>
+  <li>PX4 官方 · Holybro Pixhawk Jetson Baseboard 配套电脑指南(TELEM2↔THS1 内部连线原文):
+      <a href="https://docs.px4.io/main/en/companion_computer/holybro_pixhawk_jetson_baseboard" target="_blank">docs.px4.io · holybro_pixhawk_jetson_baseboard</a></li>
+  <li>Holybro 官方文档 · Pixhawk Jetson Baseboard 概览与规格:
+      <a href="https://docs.holybro.com/autopilot/pixhawk-baseboards/pixhawk-jetson-baseboard/overview-and-specification" target="_blank">docs.holybro.com · overview-and-specification</a></li>
+  <li>Holybro 官方文档 · Ports Pinout(各连接器引脚):
+      <a href="https://docs.holybro.com/autopilot/pixhawk-baseboards/pixhawk-jetson-baseboard/ports-pinout" target="_blank">docs.holybro.com · ports-pinout</a></li>
+  <li>Pixhawk 连接器标准 DS-009(6C TELEM 口脚序依据):
+      <a href="https://github.com/pixhawk/Pixhawk-Standards/blob/master/DS-009%20Pixhawk%20Connector%20Standard.pdf" target="_blank">github.com/pixhawk/Pixhawk-Standards</a></li>
+</ul>
+
 <!-- ===================== 5 其他口 ===================== -->
 <h2 id="s5">5. 其他串口专题</h2>
 
