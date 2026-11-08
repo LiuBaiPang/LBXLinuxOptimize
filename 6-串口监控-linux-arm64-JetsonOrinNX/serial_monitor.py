@@ -365,6 +365,11 @@ class PreviewWindow(tk.Toplevel):
 
     def toggle_hex(self):
         self.hex_mode = not self.hex_mode
+        for b in self.winfo_children():        # 更新按钮文字
+            if isinstance(b, tk.Frame):
+                for c in b.winfo_children():
+                    if isinstance(c, tk.Button) and c["text"] in ("显示HEX", "显示ASCII"):
+                        c.config(text="显示ASCII" if self.hex_mode else "显示HEX")
 
     def save(self):
         fn = filedialog.asksaveasfilename(defaultextension=".log",
@@ -987,7 +992,7 @@ class App(tk.Tk):
         cards = tk.Frame(f, bg=C_BG)
         cards.pack(fill="x", padx=8, pady=2)
 
-        def card(title, row, col, big=False):
+        def card(title, row, col):
             lf = tk.LabelFrame(cards, text=title, bg=C_CARD, fg=C_SUB, font=FONT_S,
                                padx=8, pady=6, relief="flat",
                                highlightbackground=C_LINE, highlightthickness=1)
@@ -1039,7 +1044,7 @@ class App(tk.Tk):
             self.tv_mav.column(c, width=w, anchor="w")
         self.tv_mav.pack(fill="both", expand=True)
 
-        c7 = card("飞控文本消息(STATUSTEXT)", 1, 1, )
+        c7 = card("飞控文本消息(STATUSTEXT)", 1, 1)
         self.txt_status = scrolledtext.ScrolledText(
             c7, bg=C_INPUT, fg=C_FG, font=FONT_M, relief="flat", height=9, width=44)
         self.txt_status.pack(fill="both", expand=True)
