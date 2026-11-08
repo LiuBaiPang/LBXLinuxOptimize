@@ -109,6 +109,20 @@ MSG_DEFS = {
             ("severity", "u8"), ("text", "char[50]")]),
 }
 
+# 未完整解析的消息: 只给出可读名字(用于速率表/日志展示, 不参与 CRC 校验)
+MSG_NAMES = {
+    26:  "SERVO_OUTPUT_RAW(舵机输出)",
+    83:  "ATTITUDE_TARGET(姿态目标)",
+    105: "HIGHRES_IMU(高分辨率IMU)",
+    111: "TIMESYNC(时间同步)",
+    116: "SCALED_IMU2(第二IMU)",
+    141: "ALTITUDE(高度)",
+    230: "ESTIMATOR_STATUS(估计器状态)",
+    140: "ESC_TELEMETRY(电调遥测)",
+    241: "WIFI_CONFIG_AP?/未确认",
+    331: "消息331(厂商扩展)",
+}
+
 # 类型 -> struct 格式(标量部分)
 _SCALAR = {"u8": "B", "i8": "b", "u16": "H", "i16": "h",
            "u32": "I", "i32": "i", "u64": "Q", "f32": "f"}
