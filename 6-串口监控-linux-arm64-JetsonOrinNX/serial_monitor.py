@@ -524,7 +524,8 @@ class App(tk.Tk):
         top.pack(fill="x", padx=8, pady=(8, 2))
         tk.Label(top, text="本机全部串口设备", bg=C_BG, fg=C_FG,
                  font=FONT_H).pack(side="left")
-        tk.Label(top, text="活动列 = 内核中断计数增量(不动设备即可看到数据流动)",
+        tk.Label(top, text="活动列 = 内核中断增量, 不动设备就能看到数据流动"
+                 "(内核不暴露中断的口显示—, 想看流量请用预览)",
                  bg=C_BG, fg=C_SUB, font=FONT_S).pack(side="left", padx=12)
         self.btn(top, "刷新", self._refresh_ports).pack(side="right")
         self.auto_refresh = tk.BooleanVar(value=True)
@@ -1737,8 +1738,9 @@ def main():
             getty=snap["getty"],
             port_count=len(snap["ports"]),
             ports=[dict(dev=p["dev"], kind=p["kind"], hw=p["hw"],
-                        group=p["group"], mode=p["mode"], perms=p["perms"],
-                        busy_users=p["busy_users"], irq=p["irq"])
+                        driver=p["driver"], group=p["group"], mode=p["mode"],
+                        perms=p["perms"], busy_users=p["busy_users"],
+                        irq=p["irq"])
                    for p in snap["ports"]],
         )
         print(json.dumps(out, ensure_ascii=False, indent=1))
