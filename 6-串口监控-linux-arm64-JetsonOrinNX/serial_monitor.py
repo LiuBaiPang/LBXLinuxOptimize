@@ -592,8 +592,32 @@ class App(tk.Tk):
             self.tv.selection_set(sel[0])
         self._console_txt = snap["console"]
         self._getty_txt = ",".join(snap["getty"]) or "无"
+        self._update_port_combos([p["dev"] for p in ports])
+        # 40-pin(ttyAMA0)占用状态提示(资料页)
+        if hasattr(self, "lbl_40stat"):
+            occupied = ("ttyAMA0" in snap["console"].split()
+                        or "serial-getty@ttyAMA0" in snap["getty"])
+            self.lbl_40stat.config(
+                text=("⚠ ttyAMA0(40-pin 8/10 脚)当前被内核控制台/getty 占用,"
+                      "飞控使用前请点\"释放40-pin串口\"并重启"
+                      if occupied else
+                      "✓ ttyAMA0(40-pin 8/10 脚)未被系统占用, 可直接用于飞控"),
+                fg=C_WARN if occupied else C_OK)
 
-    _io_stat = {}      # dev -> {rx, tx}(由打开过该口的页面更新;类级占位,实例中重置)
+    def _update_port_combos(self, devs):
+        """用最新端口列表刷新终端页/MAVLink页下拉(保留已有选择)。"""
+        for cmb in (self.cmb_tport, self.cmb_mport):
+            old = cmb.get()
+            cmb["values"] = devs
+            if old in devs:
+                cmb.set(old)
+            elif devs:
+                cmb.set(devs[0])
+        # 飞控口智能默认: 有 ttyACM* 优先(USB 飞控), 其次 ttyTHS*
+        preferred = [d for d in devs if d.startswith("/dev/ttyACM")] or \
+                    [d for d in devs if d.startswith("/dev/ttyTHS")] or devs
+        if self.cmb_mport.get() not in preferred and preferred:
+            self.cmb_mport.set(preferred[0])
 
     def _sel_dev(self):
         s = self.tv.selection()
