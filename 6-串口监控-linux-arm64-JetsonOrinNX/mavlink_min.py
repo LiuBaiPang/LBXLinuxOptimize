@@ -301,11 +301,9 @@ class Parser(object):
             else:
                 fmt = "<" + _SCALAR[t]
                 sz = struct.calcsize(fmt)
-                chunk = payload[off:off + sz]
+                # v2 截断 payload: 缺失的尾字节按 0 补齐(官方语义)
+                chunk = payload[off:off + sz].ljust(sz, b"\x00")
                 off += sz
-                if len(chunk) < sz:
-                    fields[name] = 0        # v2 截断尾按 0
-                    continue
                 fields[name] = struct.unpack(fmt, chunk)[0]
         return fields
 
