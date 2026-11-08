@@ -566,7 +566,7 @@ def _selftest():
                         throttle=55, alt=100.5, climb=-1.5))
     f1, f2 = p.feed(b"\x00\xff\xab" + a + b)
     check(f1.name == "HEARTBEAT" and f2.name == "VFR_HUD"
-          and mode_name(12, 2, 29, 0) == "MANUAL"
+          and mode_name(12, 2, 29, 1 << 24) == "MANUAL"
           and abs(f2.fields["alt"] - 100.5) < 1e-5, "杂散字节 + 连续两帧")
 
     # 7. PX4 模式位解码: AUTO/MISSION => main=4 sub=4
