@@ -1380,8 +1380,9 @@ class App(tk.Tk):
         hz = len(hb) / 3.0 if hb else 0
         self.lbl_mode.config(text=self.m_mode or "等待心跳…")
         if self.m_armed is not None:
-            self.lbl_armed.config(text="🔓 已解锁(电机可能转动!)" if self.m_armed
-                                  else "🔒 已上锁", fg=C_BAD if self.m_armed else C_OK)
+            # 注意: 本机 tkinter 标签用 U+1F5xx emoji 会触发 X RenderAddGlyphs 崩溃
+            self.lbl_armed.config(text="● 已解锁(电机可能转动!)" if self.m_armed
+                                  else "● 已上锁", fg=C_BAD if self.m_armed else C_OK)
         self.lbl_sysstate.config(text="系统: %s | 心跳 %.1f Hz | 链路 %s"
                                  % (getattr(self, "m_sysstate", "--"), hz,
                                     ("%.0f ms" % self.m_rtt) if self.m_rtt else "—"))
