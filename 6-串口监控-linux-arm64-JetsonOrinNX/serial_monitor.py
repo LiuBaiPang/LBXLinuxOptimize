@@ -828,12 +828,9 @@ class App(tk.Tk):
         self.t_rx = self.t_tx = 0
         self.btn_term.config(text="已连接", state="disabled")
         self.lbl_tstat.config(
-            text="已连接 %s @ %s 8%s%s %s" % (dev, self.cmb_tbaud.get(),
-                                              self.cmb_tdata.get(),
-                                              self.cmb_tpar.get(),
-                                              self.cmb_tstop.get() + "停止位/"
-                                              + flow if False else
-                                              self.cmb_tstop.get() + "停止位 流控:" + flow),
+            text="已连接 %s @ %s  数据位%s 校验%s 停止位%s 流控%s"
+                 % (dev, self.cmb_tbaud.get(), self.cmb_tdata.get(),
+                    self.cmb_tpar.get(), self.cmb_tstop.get(), flow),
             fg=C_OK)
         self.log("✓ 终端连接 %s @ %s" % (dev, self.cmb_tbaud.get()))
         threading.Thread(target=self._term_reader, daemon=True).start()
@@ -1632,25 +1629,6 @@ class App(tk.Tk):
             self.log("✗ 退出码 %d" % p.returncode)
             return False
         return True
-
-    # ---------------- 端口下拉刷新 ----------------
-    def _refresh_port_combos(self):
-        try:
-            devs = [p["dev"] for p in scan_ports()]
-        except Exception:
-            return
-        for cmb in (self.cmb_tport, self.cmb_mport):
-            old = cmb.get()
-            cmb["values"] = devs
-            if old in devs:
-                cmb.set(old)
-            elif devs:
-                cmb.set(devs[0])
-        # 飞控口智能默认: 有 ttyACM* 优先(USB 飞控), 其次 ttyTHS*
-        preferred = [d for d in devs if d.startswith("/dev/ttyACM")] or \
-                    [d for d in devs if d.startswith("/dev/ttyTHS")] or devs
-        if self.cmb_mport.get() not in preferred and preferred:
-            self.cmb_mport.set(preferred[0])
 
     # ---------------- 轮询与事件泵 ----------------
     def _poll_loop(self):
