@@ -176,9 +176,15 @@ def scan_ports():
             if hit:
                 cmd = _read1(pid_dir + "/cmdline").replace("\x00", " ").strip()
                 users.append("pid%s:%s" % (pid, (cmd or "?")[:24]))
-        out.append(dict(dev=dev, name=name, kind=port_kind(name), hw=hw or "-",
+        # 飞控识别: by-id 名里带 PX4/Pixhawk/FMU 等关键词 → 标为飞控
+        byid_name = byid.get(dev, "")
+        is_fc = bool(byid_name) and any(k in byid_name for k in FC_KEYWORDS)
+        kind = "USB飞控(PX4/ArduPilot)" if is_fc else port_kind(name)
+        if name == "px4fc":
+            kind = "USB飞控(固定别名)"
+        out.append(dict(dev=dev, name=name, kind=kind, hw=hw or "-",
                         driver=driver, group=g, mode=mode, perms=perms,
-                        busy_users=users, irq=None))
+                        busy_users=users, irq=None, fc=is_fc, byid=byid_name))
     return out
 
 
