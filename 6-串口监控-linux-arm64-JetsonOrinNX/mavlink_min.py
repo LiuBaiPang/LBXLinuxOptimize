@@ -32,16 +32,17 @@ MSG_DEFS = {
             ("custom_mode", "u32"), ("type", "u8"), ("autopilot", "u8"),
             ("base_mode", "u8"), ("system_status", "u8"), ("mavlink_version", "u8")]),
     1:   ("SYS_STATUS", 124, [
-            # 新版 XML: 传感器位图已是 u32; battery_remaining 紧跟 current_battery
+            # 线序经 pymavlink 打包 + 真机 PX4 字节双重确认:
+            # 传感器位图已是 u32; drop_rate/errors 为 u16 且在 battery_remaining 之前
             ("onboard_control_sensors_present", "u32"),
             ("onboard_control_sensors_enabled", "u32"),
             ("onboard_control_sensors_health", "u32"),
             ("load", "u16"), ("voltage_battery", "u16"), ("current_battery", "i16"),
-            ("battery_remaining", "i8"),
             # --- v2 扩展 ---
-            ("drop_rate_comm", "u8"), ("errors_comm", "u8"),
-            ("errors_count1", "u8"), ("errors_count2", "u8"),
-            ("errors_count3", "u8"), ("errors_count4", "u8")]),
+            ("drop_rate_comm", "u16"), ("errors_comm", "u16"),
+            ("errors_count1", "u16"), ("errors_count2", "u16"),
+            ("errors_count3", "u16"), ("errors_count4", "u16"),
+            ("battery_remaining", "i8")]),
     2:   ("SYSTEM_TIME", 137, [("time_unix_usec", "u64"), ("time_boot_ms", "u32")]),
     4:   ("PING", 237, [
             ("time_usec", "u64"), ("seq", "u32"),

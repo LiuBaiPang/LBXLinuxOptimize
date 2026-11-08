@@ -90,15 +90,11 @@ def main():
 
         # ============ 方向 B: 官方打包 → 我方解码 ============
         # 用 pymavlink 构造同一条消息打包, 验证我方解析器读出的字段一致
+        import inspect
         bad_b = []
         try:
-            args = []
-            for fn in cls.__init__.__code__.co_varnames[1:]:
-                if fn not in vals:
-                    args.append(0)
-                    continue
-                v = vals[fn]
-                args.append(v)
+            params = list(inspect.signature(cls.__init__).parameters)[1:]
+            args = [vals.get(fn, 0) for fn in params]
             obj = cls(*args)
             raw_b = obj.pack(mavp)
             frames = mav.Parser().feed(raw_b)
