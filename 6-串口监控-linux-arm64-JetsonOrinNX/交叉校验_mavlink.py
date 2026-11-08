@@ -90,12 +90,20 @@ def main():
 
         # ============ 方向 B: 官方打包 → 我方解码 ============
         # 用 pymavlink 构造同一条消息打包, 验证我方解析器读出的字段一致
+        # 注意: pymavlink 2.4.50 的 __init__ 对 char[] 字段要 bytes,
+        #       带默认值的扩展参数(如 repr_offset_q)不能显式传 0
         import inspect
         bad_b = []
         try:
             params = list(inspect.signature(cls.__init__).parameters)[1:]
-            args = [vals.get(fn, 0) for fn in params]
-            obj = cls(*args)
+            kwargs = {}
+            for fn in params:
+                if fn not in vals:
+                    continue                    # 交给 pymavlink 的默认值
+                v = vals[fn]
+                t = dict(spec).get(fn, "")
+                kwargs[fn] = v.encode() if t.startswith("char") else v
+            obj = cls(**kwargs)
             raw_b = obj.pack(mavp)
             frames = mav.Parser().feed(raw_b)
             if not frames:
