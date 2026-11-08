@@ -71,9 +71,9 @@ USB_EVT_RE = re.compile(
     re.IGNORECASE)
 
 IFACE_CLASS = {
-    "0x00": "设备特定", "0x01": "音频", "0x02": "CDC控制", "0x03": "HID人机",
-    "0x06": "图像", "0x07": "打印机", "0x08": "大容量存储", "0x09": "集线器",
-    "0x0a": "CDC数据", "0x0e": "视频(UVC)", "0xe0": "无线蓝牙", "0xff": "厂商自定义",
+    "00": "设备特定", "01": "音频", "02": "CDC控制", "03": "HID人机",
+    "06": "图像", "07": "打印机", "08": "大容量存储", "09": "集线器",
+    "0a": "CDC数据", "0e": "视频(UVC)", "e0": "无线蓝牙", "ff": "厂商自定义",
 }
 
 
@@ -142,6 +142,8 @@ def scan_usb():
             drv = os.path.basename(os.path.realpath(
                 os.path.join(ifdir, "driver")))
             cls = rd(ifdir, "bInterfaceClass").lower()
+            if cls.startswith("0x"):
+                cls = cls[2:]
             d["ifaces"].append({
                 "name": ifname, "driver": drv if drv != ifname else "(无)",
                 "cls": IFACE_CLASS.get(cls, cls or "?"),
