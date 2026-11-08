@@ -1168,10 +1168,13 @@ class App(tk.Tk):
         self._open_fds[dev] = "MAVLink"
         self._io_stat.setdefault(dev, dict(rx=0, tx=0))
         self.btn_mconn.config(text="已连接", state="disabled")
-        self.lbl_mstat.config(text="连接 %s, 等待心跳…" % dev, fg=C_WARN)
-        self.log("✓ MAVLink 连接 %s @ %s(等待飞控心跳)" % (dev, self.cmb_mbaud.get()))
+        self.lbl_mstat.config(text="连接 %s, 已发地面站心跳, 等待飞控应答…" % dev,
+                              fg=C_WARN)
+        self.log("✓ MAVLink 连接 %s @ %s" % (dev, self.cmb_mbaud.get()))
         self.txt_cmdlog.delete("1.0", "end")
         self.txt_status.delete("1.0", "end")
+        # 不少飞控(如 PX4)要"看到"地面站心跳才开始发数据, 连接后立即发一个
+        self._mav_last_gcs_hb = 0
         threading.Thread(target=self._mav_reader, daemon=True).start()
 
     def _mav_disconnect(self):
