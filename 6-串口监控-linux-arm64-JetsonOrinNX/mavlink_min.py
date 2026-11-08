@@ -128,17 +128,13 @@ def msg_size(msgid):
 
 
 def _crc16(data, crc=0xFFFF):
-    """CRC-16/X.25 裸循环(初值 0xFFFF, 反射多项式 0x8408, 末尾不再异或)。"""
+    """MAVLink CRC 裸循环: 初值 0xFFFF, 反射多项式 0x8408,
+    逐字节/逐段链式累加, 任何阶段都不做 0xFFFF 异或。"""
     for b in data:
         crc ^= b
         for _ in range(8):
             crc = (crc >> 1) ^ 0x8408 if crc & 1 else crc >> 1
     return crc
-
-
-def crc_x25(data, crc=0xFFFF):
-    """单段 CRC-16/X.25(最终异或 0xFFFF)。"""
-    return _crc16(data, crc) ^ 0xFFFF
 
 
 def frame_crc(header_after_stx, payload, crc_extra):

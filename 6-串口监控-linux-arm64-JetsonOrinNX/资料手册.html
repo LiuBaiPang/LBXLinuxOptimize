@@ -593,16 +593,18 @@ os.close(fd)</code></pre>
 <pre><code class="python">#!/usr/bin/env python3
 """MAVLink v2 帧结构速查:
    FD | LEN | INC | CMP | SEQ | SYS | CMP | MSGID(3B) | PAYLOAD(LEN) | CRC(2B) [,签名13B]
-   CRC 为 CRC-16/X.25, 校验范围 = LEN..MSGID + PAYLOAD + 每消息的 CRC_EXTRA 字节"""
-def crc_x25(data, crc=0xFFFF):
+   CRC 算法: 初值 0xFFFF + 反射多项式 0x8408(俗称 CRC16/X.25),
+   但注意【最终不做 0xFFFF 异或】——这是 MAVLink 私有变体,网上大多数 X.25 代码会多异或一次!
+   校验范围 = LEN..MSGID 头部 + PAYLOAD + 每消息的 CRC_EXTRA 字节"""
+def mavlink_crc(data, crc=0xFFFF):
     for b in data:
         crc ^= b
         for _ in range(8):
             crc = (crc &gt;&gt; 1) ^ 0x8408 if crc &amp; 1 else crc &gt;&gt; 1
-    return crc ^ 0xFFFF
+    return crc
 
 # 例: HEARTBEAT(消息号0) 的 CRC_EXTRA = 50
-# 完整实现见本目录 mavlink_min.py(纯标准库, 已通过 10 项自测)</code></pre>
+# 完整实现见本目录 mavlink_min.py(纯标准库, 已用真机 PX4 数据验证)</code></pre>
 
 <div class="tipbox">🛠 <b>其实不用手写</b>:《串口监控工具》的 mavlink_min.py 已实现完整解析/构造,
 「飞控 MAVLink」页就是它的 GUI。想在自己程序里用:
