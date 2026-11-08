@@ -885,9 +885,7 @@ class App(tk.Tk):
         if not self.tpause.get():
             s = to_hex(data) if self.thexsend.get() else printable(data)
             self.ttxt.insert("end", s, "tx")
-            if not self.tscroll.get():
-                pass
-            else:
+            if self.tscroll.get():
                 self.ttxt.see("end")
         if desc:
             self.log("$ 发送 %s: %s" % (self.tdev, desc))
@@ -979,8 +977,7 @@ class App(tk.Tk):
                                   bg=C_OK, fg="#000000")
         self.btn_mconn.grid(row=0, column=4, padx=6)
         self.btn(cfg, "断开", self._mav_disconnect).grid(row=0, column=5, padx=2)
-        self.btn(cfg, "自动嗅探波特率", self._mav_sniff).pack() if False else \
-            self.btn(cfg, "自动嗅探波特率", self._mav_sniff).grid(row=0, column=6, padx=6)
+        self.btn(cfg, "自动嗅探波特率", self._mav_sniff).grid(row=0, column=6, padx=6)
         self.lbl_mstat = tk.Label(cfg, text="未连接(USB直连的飞控一般是 ttyACM0 @115200;"
                                   " 40-pin 接线是 ttyAMA0,常见 57600)",
                                   bg=C_CARD, fg=C_SUB, font=FONT_S)
