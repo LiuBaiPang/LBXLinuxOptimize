@@ -13,6 +13,7 @@ EXTLINUX="/boot/extlinux/extlinux.conf"
 GETTY_UNIT="serial-getty@ttyAMA0.service"
 UDEV_RULE="/etc/udev/rules.d/99-aaafix-uart.rules"
 BACKUP="/boot/extlinux/extlinux.conf.aaafix-40pin.bak"
+FC_RULE="/etc/udev/rules.d/99-aaafix-fc-alias.rules"
 
 # ---------- 子命令 ----------
 

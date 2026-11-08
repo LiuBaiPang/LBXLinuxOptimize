@@ -1792,7 +1792,8 @@ def main():
             ports=[dict(dev=p["dev"], kind=p["kind"], hw=p["hw"],
                         driver=p["driver"], group=p["group"], mode=p["mode"],
                         perms=p["perms"], busy_users=p["busy_users"],
-                        irq=p["irq"])
+                        irq=p["irq"], fc=p.get("fc", False),
+                        byid=p.get("byid", ""))
                    for p in snap["ports"]],
         )
         print(json.dumps(out, ensure_ascii=False, indent=1))
