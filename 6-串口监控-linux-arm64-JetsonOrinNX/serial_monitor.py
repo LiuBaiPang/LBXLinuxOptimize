@@ -26,6 +26,7 @@ import json
 import os
 import re
 import math
+import array
 import subprocess
 import sys
 import threading
