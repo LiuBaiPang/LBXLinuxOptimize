@@ -783,8 +783,11 @@ class App(tk.Tk):
         for r in snap["rails"]:
             if re.search(r"VDD.*IN|VIN|总输入|IN_5|5V", r["label"], re.I):
                 parts = []
-                if r.get("power_mW"):
-                    parts.append("%.1fW" % (r["power_mW"] / 1000.0))
+                pw = r.get("power_mW")
+                if pw is None and r.get("v") and r.get("a"):
+                    pw = r["v"] * r["a"] * 1000.0
+                if pw:
+                    parts.append("%.1fW" % (pw / 1000.0))
                 if r.get("a"):
                     parts.append("%.2fA" % r["a"])
                 if parts:
@@ -855,6 +858,8 @@ class App(tk.Tk):
             if not w:
                 continue
             v, a, pw = r.get("v"), r.get("a"), r.get("power_mW")
+            if pw is None and v is not None and a is not None:
+                pw = v * a * 1000.0        # hwmon 无功率字段时按 V×A 补算
             if v is not None or a is not None:
                 txt = "%s V  %s A  %s W" % (
                     ("%.2f" % v) if v is not None else "—",
@@ -1103,7 +1108,9 @@ class App(tk.Tk):
             now = time.time()
             if now - last >= 1 / 14.0:          # 限制预览帧率,减轻负担
                 h, w = frame.shape[:2]
-                raw = b"P6\n%d %d\n255\n" % (w, h) + frame[:, :, ::-1].tobytes()
+                ok2, buf = cv2.imencode(".png", frame)
+                if not ok2:
+                    continue
                 stats = {
                     "fps": n / (now - t0) if now > t0 else 0,
                     "size": "%dx%d" % (w, h),
@@ -1111,7 +1118,7 @@ class App(tk.Tk):
                     "errs": errs,
                 }
                 self.q.put(("cam",
-                            (base64.b64encode(raw).decode("ascii"), stats)))
+                            (base64.b64encode(buf).decode("ascii"), stats)))
                 last = now
         try:
             cap.release()
