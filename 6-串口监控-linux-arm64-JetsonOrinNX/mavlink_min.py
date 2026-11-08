@@ -7,7 +7,8 @@ mavlink_min —— MAVLink v1/v2 最小实现(纯 Python 标准库,零第三方�
      但不想引入 pymavlink 依赖。本模块手写实现:
   - v1(帧头 0xFE) 与 v2(帧头 0xFD) 帧解析(流式字节缓冲,自动判版本)
   - v2 的"零填充截断 payload"与"签名帧跳过"(MAVLINK_IFLAG_SIGNED)
-  - CRC-16/X.25 + 每消息 CRC_EXTRA 校验(与飞控逐字节一致才收)
+  - MAVLink 变体 CRC(初值 0xFFFF, 反射多项式 0x8408, 最终不异或)+ 每消息
+    CRC_EXTRA 校验(已用真实 PX4 飞控数据验证)
   - 常用消息的编解码: 心跳/系统状态/姿态/四元数/位置/GPS/HUD/RC/命令/文本/参数/版本
   - ArduPilot 与 PX4 两套 custom_mode → 飞行模式名 映射(按 autopilot 字段自动选)
   - 未知消息 ID 无法校验 CRC_EXTRA(表里没有),按"未校验"计数并保留 id 供速率统计
