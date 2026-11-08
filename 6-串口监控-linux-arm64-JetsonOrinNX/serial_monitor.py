@@ -1658,6 +1658,14 @@ class App(tk.Tk):
             if self.run_root(["restore-40pin"]):
                 self.log("✓ 已恢复 40-pin 串口为系统默认, 重启后生效")
 
+    def _act_fc_alias(self):
+        if self.run_root(["fc-alias"]):
+            self.log("✓ 飞控别名已创建: 以后无论插哪个 USB 口都用 /dev/px4fc 访问飞控")
+
+    def _act_fc_alias_rm(self):
+        if self.run_root(["fc-alias-remove"]):
+            self.log("✓ 飞控别名已移除")
+
     # ---------------- sudo 动作(仿 5 号工具) ----------------
     def _ask_password(self):
         try:
