@@ -1300,7 +1300,9 @@ class App(tk.Tk):
         if name == "HEARTBEAT":
             self._mav_on_heartbeat(fr)
         elif name == "SYS_STATUS":
-            self.m_batt_v = flds.get("voltage_battery", 0) / 1000.0
+            # 0xFFFF=未知(未接电池), 电流/电量的 -1 也是"未知"
+            v = flds.get("voltage_battery", 0)
+            self.m_batt_v = v / 1000.0 if 0 < v < 60000 else None
             cur = flds.get("current_battery", -1)
             self.m_batt_i = cur / 100.0 if cur >= 0 else None
             rem = flds.get("battery_remaining", -1)
