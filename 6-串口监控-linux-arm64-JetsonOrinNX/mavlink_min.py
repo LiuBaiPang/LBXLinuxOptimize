@@ -20,6 +20,8 @@ import time
 MAVLINK_V1_STX = 0xFE
 MAVLINK_V2_STX = 0xFD
 MAVLINK_IFLAG_SIGNED = 0x01
+MAV_MODE_FLAG_CUSTOM_MODE_ENABLED = 0x01
+MAV_MODE_FLAG_SAFETY_ARMED = 0x80          # base_mode 位7 = 解锁状态
 
 # ---------------- 消息定义表: msgid -> (名称, CRC_EXTRA, [(字段名, 类型), ...]) ----------------
 # 类型: u8 i8 u16 i16 u32 i32 u64 f32 char[N] u8[N]  (MAVLink 全部小端)
