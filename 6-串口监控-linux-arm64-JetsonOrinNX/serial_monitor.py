@@ -78,7 +78,11 @@ FONT_M  = ("Noto Sans Mono CJK SC", 10)
 # ---------------- 串口设备识别 ----------------
 PORT_PATTERNS = ["/dev/ttyTHS[0-9]*", "/dev/ttyAMA[0-9]*", "/dev/ttyTCU[0-9]*",
                  "/dev/ttyS[0-9]", "/dev/ttyACM[0-9]*", "/dev/ttyUSB[0-9]*",
-                 "/dev/ttyGS[0-9]*"]
+                 "/dev/ttyGS[0-9]*", "/dev/px4fc"]
+
+# 飞控识别: /dev/serial/by-id 里带这些关键词的 USB 串口按"飞控"对待
+FC_KEYWORDS = ("PX4", "Pixhawk", "pixhawk", "FMU", "Auterion", "AUTERION",
+               "ArduPilot", "ARDUPILOT", "Holybro", "HOLYBRO", "Cube", "CUBE")
 
 PORT_KIND = {   # 设备名前缀 -> 人类可读类型
     "ttyTHS": "板载高速UART(Tegra)",
