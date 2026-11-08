@@ -165,14 +165,19 @@ def scan_ports():
                 cmd = _read1(pid_dir + "/cmdline").replace("\x00", " ").strip()
                 users.append("pid%s:%s" % (pid, (cmd or "?")[:24]))
         out.append(dict(dev=dev, name=name, kind=port_kind(name), hw=hw or "-",
-                        group=g, mode=mode, perms=perms,
+                        driver=driver, group=g, mode=mode, perms=perms,
                         busy_users=users, irq=None))
     return out
 
 
+# 设备名/驱动名 -> /proc/interrupts 中断行末 token 的别名
+# (实测本内核: ttyAMA0 的中断行叫 uart-pl011; serial-tegra 的 ttyTHS* 走 DMA,
+#  中断不单列, 这些口看不到活动指示 —— 表格里显示"—", 想看流量用预览。)
+PORT_IRQ_ALIAS = {"ttyAMA0": "uart-pl011"}
+
+
 def read_irq_counts():
-    """读 /proc/interrupts, 返回 {硬件节点名: 中断累计次数}。
-    串口有数据收发时中断计数会增长 —— 这是"不开口就知道有没有流量"的关键。"""
+    """读 /proc/interrupts, 返回 {中断行末token: 各CPU计数之和}。"""
     res = {}
     try:
         with open("/proc/interrupts") as f:
@@ -181,16 +186,13 @@ def read_irq_counts():
                 if not m:
                     continue
                 rest = m.group(2).split()
+                if not rest:
+                    continue
                 total = 0
-                for tok in rest:            # 累加各 CPU 的计数值
+                for tok in rest[:-1]:       # 倒数第1个是设备名, 前面数字是各CPU计数
                     if tok.isdigit():
                         total += int(tok)
-                    else:
-                        break
-                for tok in rest:
-                    if re.match(r"^[0-9a-f]+\.serial$|combined-uart", tok):
-                        res[tok] = total
-                        break
+                res[rest[-1]] = res.get(rest[-1], 0) + total
     except OSError:
         pass
     return res
@@ -218,8 +220,11 @@ def collect_snapshot():
     ports = scan_ports()
     irqs = read_irq_counts()
     for p in ports:
-        if p["hw"] in irqs:
-            p["irq"] = irqs[p["hw"]]
+        # 多候选匹配中断行: 设备树节点名 / 驱动名 / 别名表
+        for cand in (p["hw"], p["driver"], PORT_IRQ_ALIAS.get(p["name"])):
+            if cand and cand in irqs:
+                p["irq"] = irqs[cand]
+                break
     return dict(ts=time.time(), ports=ports, getty=getty_units(),
                 console=console_active())
 
