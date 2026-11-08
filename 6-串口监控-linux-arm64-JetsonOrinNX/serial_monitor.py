@@ -113,9 +113,16 @@ def _read1(path):
 def scan_ports():
     """只读扫描全部串口设备(不开口, 不影响任何正在使用串口的程序)。
 
-    返回 dict 列表: dev name kind hw perms group busy_users irq console_getty
+    返回 dict 列表: dev name kind hw perms group busy_users irq fc byid
     """
     import grp
+    # /dev/serial/by-id 反查表: realpath -> 可读的设备名(含厂商/型号)
+    byid = {}
+    for p in glob.glob("/dev/serial/by-id/*"):
+        try:
+            byid[os.path.realpath(p)] = os.path.basename(p)
+        except OSError:
+            pass
     devs = set()
     for pat in PORT_PATTERNS:
         for d in glob.glob(pat):
