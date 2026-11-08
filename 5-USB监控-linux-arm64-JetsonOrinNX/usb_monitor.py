@@ -776,11 +776,13 @@ class App(tk.Tk):
         pwr = ""
         for r in snap["rails"]:
             if re.search(r"VDD.*IN|VIN|总输入|IN_5|5V", r["label"], re.I):
+                parts = []
                 if r.get("power_mW"):
-                    pwr = "%.1fW" % (r["power_mW"] / 1000.0)
-                    break
+                    parts.append("%.1fW" % (r["power_mW"] / 1000.0))
                 if r.get("a"):
-                    pwr = "%.2fA" % r["a"]
+                    parts.append("%.2fA" % r["a"])
+                if parts:
+                    pwr = " ".join(parts)
                     break
         self.lb_pwr.configure(text=("系统供电: " + pwr) if pwr else "")
         cur, names = snap["nvpmodel"], snap["nvpmodel_names"]
