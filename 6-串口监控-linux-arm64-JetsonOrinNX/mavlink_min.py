@@ -100,17 +100,17 @@ MSG_DEFS = {
             ("progress", "u8"), ("result_param2", "i32"),
             ("target_system", "u8"), ("target_component", "u8")]),
     147: ("BATTERY_STATUS", 154, [
-            ("id", "u8"), ("battery_function", "u8"), ("type", "u8"),
+            ("current_consumed", "i32"), ("energy_consumed", "i32"),
             ("temperature", "i16"), ("voltages", "u16[10]"),
-            ("current_battery", "i16"), ("current_consumed", "i32"),
-            ("energy_consumed", "i32"), ("battery_remaining", "i8")]),
+            ("current_battery", "i16"), ("id", "u8"), ("battery_function", "u8"),
+            ("type", "u8"), ("battery_remaining", "i8")]),
     148: ("AUTOPILOT_VERSION", 178, [
-            ("capabilities", "u64"), ("flight_sw_version", "u32"),
-            ("middleware_sw_version", "u32"), ("os_sw_version", "u32"),
-            ("board_version", "u32"),
+            ("capabilities", "u64"), ("uid", "u64"),
+            ("flight_sw_version", "u32"), ("middleware_sw_version", "u32"),
+            ("os_sw_version", "u32"), ("board_version", "u32"),
+            ("vendor_id", "u16"), ("product_id", "u16"),
             ("flight_custom_version", "u8[8]"), ("middleware_custom_version", "u8[8]"),
-            ("os_custom_version", "u8[8]"), ("vendor_id", "u16"), ("product_id", "u16"),
-            ("uid", "u64")]),
+            ("os_custom_version", "u8[8]")]),
     253: ("STATUSTEXT", 83, [
             ("severity", "u8"), ("text", "char[50]")]),
 }
